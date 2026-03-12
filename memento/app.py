@@ -66,15 +66,30 @@ def create_app() -> Flask:
                 session['user'] = {'email': 'dev@local', 'name': 'Dev', 'picture': ''}
                 g.user_role = 'admin'
 
-    # Root route: project selector
+    # Root route: project selector (filtered by user access)
     @app.route('/')
     def root():
-        if len(configs) == 1:
-            slug = next(iter(configs))
-            return redirect(f'/{slug}/')
-        if not dev_mode and not session.get('user'):
-            return _selector_page(configs)
-        return _selector_page(configs)
+        user = session.get('user')
+        if not dev_mode and not user:
+            # Not logged in — redirect to login, then back here
+            return redirect('/auth/login?next=/')
+
+        if dev_mode:
+            accessible = configs
+        else:
+            email = user['email']
+            domain = email.split('@')[-1]
+            accessible = {
+                slug: cfg for slug, cfg in configs.items()
+                if domain in cfg.auth.allowed_domains
+                or email in cfg.auth.allowed_emails
+                or email == cfg.auth.initial_admin
+            }
+        if len(accessible) == 1:
+            return redirect(f'/{next(iter(accessible))}/')
+        if not accessible:
+            return _no_access_page()
+        return _selector_page(accessible)
 
     @app.context_processor
     def inject_globals():
@@ -114,6 +129,22 @@ h1 {{ text-align: center; color: #374151; font-size: 1.25rem; font-weight: 600; 
 <div class="grid">{cards}</div>
 </div>
 </body></html>'''
+
+
+def _no_access_page():
+    return '''<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memento</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; margin: 0;
+  min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+</style></head>
+<body>
+<div class="text-center">
+<p style="color:#6b7280;margin-bottom:0.5rem">No projects available for your account.</p>
+<a href="/auth/logout" style="color:#6366f1;font-size:0.875rem">Logout</a>
+</div>
+</body></html>''', 403
 
 
 def main():

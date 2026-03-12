@@ -28,6 +28,7 @@ class BrandingConfig:
 @dataclass
 class Config:
     name: str = "Memento"
+    slug: str = ""
     base_path: str = "."
     docs_paths: list[str] = field(default_factory=lambda: ["docs"])
     allowed_files: list[str] = field(default_factory=list)
@@ -37,10 +38,24 @@ class Config:
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> "Config":
+        path = Path(path)
         with open(path) as f:
             data = yaml.safe_load(f) or {}
 
         github = GithubConfig(**data.pop("github", {}))
         auth = AuthConfig(**data.pop("auth", {}))
         branding = BrandingConfig(**data.pop("branding", {}))
-        return cls(github=github, auth=auth, branding=branding, **data)
+        config = cls(github=github, auth=auth, branding=branding, **data)
+        if not config.slug:
+            config.slug = path.stem
+        return config
+
+
+def load_all(instances_dir: str | Path) -> dict[str, Config]:
+    """Load all YAML instance configs from a directory. Key = filename slug."""
+    instances_dir = Path(instances_dir)
+    configs = {}
+    for yaml_file in sorted(instances_dir.glob("*.yaml")):
+        config = Config.from_yaml(yaml_file)
+        configs[config.slug] = config
+    return configs

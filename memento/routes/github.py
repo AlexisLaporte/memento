@@ -3,30 +3,22 @@
 import os
 
 import httpx
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 
 from ..auth import requires_access
 
 github_bp = Blueprint('github', __name__)
 
-_repo = ""
-_token_env = "GITHUB_TOKEN"
-
-
-def init_github(config):
-    global _repo, _token_env
-    _repo = config.github.repo
-    _token_env = config.github.token_env
-
 
 def _github_get(path: str, params: dict | None = None) -> dict | list:
     """Make an authenticated GET request to GitHub API."""
-    token = os.getenv(_token_env, "")
+    repo = g.config.github.repo
+    token = os.getenv(g.config.github.token_env, "")
     headers = {"Accept": "application/vnd.github+json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     resp = httpx.get(
-        f"https://api.github.com/repos/{_repo}/{path}",
+        f"https://api.github.com/repos/{repo}/{path}",
         headers=headers,
         params=params or {},
         timeout=15,
@@ -39,7 +31,7 @@ def _github_get(path: str, params: dict | None = None) -> dict | list:
 @requires_access
 def api_issues():
     """List issues with optional filters: state, labels, milestone."""
-    if not _repo:
+    if not g.config.github.repo:
         return jsonify({"error": "GitHub repo not configured"}), 400
 
     params = {
@@ -58,11 +50,10 @@ def api_issues():
     except httpx.HTTPStatusError as e:
         return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
 
-    # Simplify response
     result = []
     for issue in issues:
         if issue.get("pull_request"):
-            continue  # Skip PRs
+            continue
         result.append({
             "number": issue["number"],
             "title": issue["title"],
@@ -82,8 +73,7 @@ def api_issues():
 @github_bp.route('/api/labels')
 @requires_access
 def api_labels():
-    """List repo labels for filter UI."""
-    if not _repo:
+    if not g.config.github.repo:
         return jsonify([])
     try:
         labels = _github_get("labels", {"per_page": "100"})
@@ -95,8 +85,7 @@ def api_labels():
 @github_bp.route('/api/milestones')
 @requires_access
 def api_milestones():
-    """List repo milestones for filter UI."""
-    if not _repo:
+    if not g.config.github.repo:
         return jsonify([])
     try:
         milestones = _github_get("milestones", {"state": "open", "per_page": "20"})

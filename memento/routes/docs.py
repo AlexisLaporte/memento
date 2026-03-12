@@ -1,21 +1,15 @@
 """Documentation file tree and markdown viewer routes."""
 
-import re
 from pathlib import Path
 
 import markdown
-from flask import Blueprint, jsonify
+import yaml
+from flask import Blueprint, g, jsonify, render_template, session
 
 from ..auth import requires_access
 
 docs_bp = Blueprint('docs', __name__)
 
-# Set at register time from config
-_base_path: Path = Path('.')
-_docs_paths: list[str] = ['docs']
-_allowed_files: list[str] = []
-
-# Markdown renderer with extensions
 _md = markdown.Markdown(extensions=[
     'tables',
     'fenced_code',
@@ -28,55 +22,58 @@ _md = markdown.Markdown(extensions=[
 })
 
 
-def init_docs(config):
-    global _base_path, _docs_paths, _allowed_files
-    _base_path = Path(config.base_path).resolve()
-    _docs_paths = config.docs_paths
-    _allowed_files = config.allowed_files
+# ─── Route: project index ────────────────────────────────────────────────────
+
+@docs_bp.route('/')
+@docs_bp.route('/<path:doc_path>')
+@requires_access
+def index(doc_path=None):
+    return render_template('index.html', config=g.config, project_slug=g.project)
+
+
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+
+def _base_path():
+    return Path(g.config.base_path).resolve()
 
 
 def _safe_path(relative: str) -> Path | None:
     """Resolve a relative path under base, return None if traversal detected."""
-    target = (_base_path / relative).resolve()
-    if not str(target).startswith(str(_base_path)):
+    base = _base_path()
+    target = (base / relative).resolve()
+    if not str(target).startswith(str(base)):
         return None
-    rel = target.relative_to(_base_path)
+    rel = target.relative_to(base)
     parts = rel.parts
     if not parts:
         return None
     root = parts[0]
-    # Allow docs_paths directories and allowed_files at root
-    if root in _docs_paths:
+    if root in g.config.docs_paths:
         return target
-    if len(parts) == 1 and root in _allowed_files:
+    if len(parts) == 1 and root in g.config.allowed_files:
         return target
     return None
 
 
 def _build_tree() -> list[dict]:
     """Build a JSON-serializable file tree for configured paths."""
+    base = _base_path()
     tree = []
-    # Add docs directories
-    for root_name in sorted(_docs_paths):
-        root_path = _base_path / root_name
+    for root_name in sorted(g.config.docs_paths):
+        root_path = base / root_name
         if not root_path.is_dir():
             continue
-        node = _dir_node(root_path)
+        node = _dir_node(root_path, base)
         if node:
             tree.append(node)
-    # Add allowed root files
-    for filename in sorted(_allowed_files):
-        fp = _base_path / filename
+    for filename in sorted(g.config.allowed_files):
+        fp = base / filename
         if fp.is_file():
-            tree.append({
-                "name": filename,
-                "path": filename,
-                "type": "file",
-            })
+            tree.append({"name": filename, "path": filename, "type": "file"})
     return tree
 
 
-def _dir_node(dir_path: Path) -> dict | None:
+def _dir_node(dir_path: Path, base: Path) -> dict | None:
     """Recursively build a directory node."""
     children = []
     try:
@@ -84,13 +81,13 @@ def _dir_node(dir_path: Path) -> dict | None:
             if entry.name.startswith('.'):
                 continue
             if entry.is_dir():
-                child = _dir_node(entry)
+                child = _dir_node(entry, base)
                 if child:
                     children.append(child)
             elif entry.suffix.lower() in ('.md', '.markdown'):
                 children.append({
                     "name": entry.name,
-                    "path": str(entry.relative_to(_base_path)),
+                    "path": str(entry.relative_to(base)),
                     "type": "file",
                 })
     except PermissionError:
@@ -99,7 +96,7 @@ def _dir_node(dir_path: Path) -> dict | None:
         return None
     return {
         "name": dir_path.name,
-        "path": str(dir_path.relative_to(_base_path)),
+        "path": str(dir_path.relative_to(base)),
         "type": "dir",
         "children": children,
     }
@@ -112,7 +109,6 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
     end = text.find('---', 3)
     if end == -1:
         return {}, text
-    import yaml
     try:
         fm = yaml.safe_load(text[3:end]) or {}
     except Exception:
@@ -122,12 +118,11 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def _render_markdown(text: str) -> str:
-    """Render markdown to HTML."""
     _md.reset()
     return _md.convert(text)
 
 
-# ─── API Routes ───────────────────────────────────────────────────────────────
+# ─── API Routes ──────────────────────────────────────────────────────────────
 
 @docs_bp.route('/api/tree')
 @requires_access
@@ -146,8 +141,4 @@ def api_doc(doc_path: str):
     fm, body = _parse_frontmatter(text)
     html = _render_markdown(body)
 
-    return jsonify({
-        "path": doc_path,
-        "frontmatter": fm,
-        "html": html,
-    })
+    return jsonify({"path": doc_path, "frontmatter": fm, "html": html})

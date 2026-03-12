@@ -1,4 +1,6 @@
-/* Memento — Docs viewer + Issues */
+/* Memento — Docs viewer + Issues (multi-project) */
+
+const PROJECT_BASE = '/' + PROJECT_SLUG;
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 
@@ -25,13 +27,13 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 const treeEl = document.getElementById('tree');
 
 async function loadTree() {
-    const resp = await fetch('/api/tree');
+    const resp = await fetch(PROJECT_BASE + '/api/tree');
     const tree = await resp.json();
     treeEl.innerHTML = '';
     tree.forEach(node => treeEl.appendChild(renderNode(node)));
 
     // Load doc from URL path if present
-    const urlPath = window.location.pathname.replace(/^\//, '');
+    const urlPath = window.location.pathname.replace(new RegExp('^' + PROJECT_BASE + '/?'), '');
     if (urlPath && urlPath !== '') loadDoc(urlPath, false);
 }
 
@@ -39,7 +41,7 @@ function renderNode(node) {
     if (node.type === 'file') {
         const a = document.createElement('a');
         a.className = 'tree-file';
-        a.href = `/${node.path}`;
+        a.href = PROJECT_BASE + '/' + node.path;
         a.textContent = node.name.replace(/\.md$/, '');
         a.dataset.path = node.path;
         a.addEventListener('click', (e) => {
@@ -91,7 +93,7 @@ async function loadDoc(path, pushState) {
         }
     }
 
-    const resp = await fetch(`/api/doc/${encodeURI(path)}`);
+    const resp = await fetch(PROJECT_BASE + `/api/doc/${encodeURI(path)}`);
     if (!resp.ok) return;
     const data = await resp.json();
 
@@ -126,7 +128,7 @@ async function loadDoc(path, pushState) {
     viewerContent.innerHTML = data.html;
 
     if (window.renderMermaidDiagrams) window.renderMermaidDiagrams();
-    if (pushState) history.pushState({ path }, '', `/${path}`);
+    if (pushState) history.pushState({ path }, '', PROJECT_BASE + '/' + path);
     document.getElementById('viewer').scrollTop = 0;
 }
 
@@ -160,7 +162,7 @@ async function loadIssues() {
     if (milestone) params.set('milestone', milestone);
 
     try {
-        const resp = await fetch(`/api/issues?${params}`);
+        const resp = await fetch(PROJECT_BASE + `/api/issues?${params}`);
         const issues = await resp.json();
 
         if (issues.error) {
@@ -223,7 +225,7 @@ async function loadLabels() {
     const select = document.getElementById('issues-label');
     if (!select) return;
     try {
-        const resp = await fetch('/api/labels');
+        const resp = await fetch(PROJECT_BASE + '/api/labels');
         const labels = await resp.json();
         for (const l of labels) {
             const opt = document.createElement('option');
@@ -238,7 +240,7 @@ async function loadMilestones() {
     const select = document.getElementById('issues-milestone');
     if (!select) return;
     try {
-        const resp = await fetch('/api/milestones');
+        const resp = await fetch(PROJECT_BASE + '/api/milestones');
         const milestones = await resp.json();
         for (const m of milestones) {
             const opt = document.createElement('option');

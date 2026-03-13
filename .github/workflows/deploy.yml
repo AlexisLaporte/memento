@@ -19,3 +19,4 @@ jobs:
             git pull origin master
             /opt/memento/venv/bin/pip install -e . -q
             systemctl restart memento
+            systemctl restart memento-mcp || true

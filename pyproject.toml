@@ -19,6 +19,8 @@ dependencies = [
     "python-dotenv>=1.0",
     "gunicorn>=22.0",
     "resend>=2.0",
+    "fastmcp>=2.0",
+    "uvicorn>=0.30",
 ]
 
 [tool.setuptools.packages.find]
@@ -26,3 +28,4 @@ include = ["memento*"]
 
 [project.scripts]
 memento = "memento.app:main"
+memento-mcp = "memento.mcp_server:main"

@@ -44,7 +44,10 @@ def admin_page():
 <div class="max-w-4xl mx-auto">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-lg font-semibold text-gray-900">Memento — All Projects</h1>
-        <a href="/" class="text-sm text-indigo-600 hover:underline">Back</a>
+        <div class="flex gap-4 items-center">
+            <a href="/new" class="text-sm text-white bg-indigo-500 px-3 py-1.5 rounded hover:bg-indigo-600">+ New project</a>
+            <a href="/" class="text-sm text-indigo-600 hover:underline">Back</a>
+        </div>
     </div>
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
         <table class="w-full">

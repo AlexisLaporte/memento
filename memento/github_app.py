@@ -61,34 +61,3 @@ def github_api(installation_id: int, path: str, params: dict | None = None) -> d
     )
     resp.raise_for_status()
     return resp.json()
-
-
-def get_available_repos() -> list[dict]:
-    """Fetch repos accessible via all GitHub App installations."""
-    try:
-        jwt_token = get_app_jwt()
-        resp = httpx.get(
-            'https://api.github.com/app/installations',
-            headers={'Authorization': f'Bearer {jwt_token}', 'Accept': 'application/vnd.github+json'},
-        )
-        if resp.status_code != 200:
-            return []
-
-        repos = []
-        for inst in resp.json():
-            token = get_installation_token(inst['id'])
-            repos_resp = httpx.get(
-                'https://api.github.com/installation/repositories',
-                headers={'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'},
-                params={'per_page': '100'},
-            )
-            if repos_resp.status_code == 200:
-                for repo in repos_resp.json().get('repositories', []):
-                    repos.append({
-                        'full_name': repo['full_name'],
-                        'name': repo['name'],
-                        'installation_id': inst['id'],
-                    })
-        return repos
-    except Exception:
-        return []

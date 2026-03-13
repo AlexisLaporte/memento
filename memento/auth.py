@@ -168,6 +168,9 @@ def login():
 
 @auth_bp.route('/callback')
 def callback():
+    # GitHub App installation redirect — not an Auth0 callback
+    if request.args.get('setup_action'):
+        return redirect('/new')
     token = oauth.auth0.authorize_access_token()
     userinfo = token.get('userinfo', {})
     session['user'] = {

@@ -95,8 +95,6 @@ def create_app() -> Flask:
         else:
             projects = load_projects_for_user(user['email'])
 
-        if len(projects) == 1:
-            return redirect(f'/{next(iter(projects))}/')
         return _dashboard_page(projects, user)
 
     @app.context_processor
@@ -196,44 +194,73 @@ def _welcome_page():
 
 
 def _dashboard_page(configs, user):
+    email = user.get('email', '') if user else ''
+    name = user.get('name', '') if user else ''
+    initials = ''.join(w[0] for w in name.split()[:2]).upper() if name else email[0:1].upper()
+    picture = user.get('picture', '') if user else ''
+
+    avatar = (
+        f'<img src="{picture}" class="w-9 h-9 rounded-full">'
+        if picture else
+        f'<div class="w-9 h-9 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-semibold">{initials}</div>'
+    )
+
     cards = ''
     for slug, config in configs.items():
+        owner_badge = ''
+        if config.owner_email == email:
+            owner_badge = '<span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">Owner</span>'
         cards += f'''
-        <a href="/{slug}/" class="block border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow bg-white">
-            <div class="font-semibold text-lg" style="color:{config.color}">{config.title}</div>
-            <p class="text-sm text-gray-500 mt-1">{config.repo_full_name}</p>
+        <a href="/{slug}/" class="group block bg-white rounded-xl border border-gray-200 p-5 hover:border-indigo-300 hover:shadow-md transition-all">
+            <div class="flex items-start justify-between mb-3">
+                <div class="w-3 h-3 rounded-full mt-1" style="background:{config.color}"></div>
+                {owner_badge}
+            </div>
+            <div class="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{config.title}</div>
+            <p class="text-xs text-gray-400 mt-1 font-mono">{config.repo_full_name}</p>
         </a>'''
 
-    user_info = ''
-    if user:
-        email = user.get('email', '')
-        user_info = f'''
-        <div class="flex items-center gap-3">
-            <span class="text-sm text-gray-400">{email}</span>
-            <a href="/auth/logout" class="text-sm text-gray-400 hover:text-gray-600">Logout</a>
-        </div>'''
+    empty_state = '''
+    <div class="col-span-full text-center py-12">
+        <div class="text-4xl mb-3">&#128218;</div>
+        <p class="text-gray-500 mb-1">No projects yet</p>
+        <p class="text-sm text-gray-400">Create your first project to get started.</p>
+    </div>''' if not cards else ''
 
     return f'''<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Memento</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-body {{ font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; margin: 0; min-height: 100vh; padding: 2rem; }}
-.grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }}
-</style></head>
-<body>
-<div class="max-w-3xl mx-auto" style="max-width:800px;margin:0 auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
-        <h1 style="color:#374151;font-size:1.25rem;font-weight:600;margin:0">Memento</h1>
-        {user_info}
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>body {{ font-family: 'Inter', system-ui, sans-serif; }}</style></head>
+<body class="bg-gray-50 min-h-screen">
+
+<nav class="max-w-4xl mx-auto flex justify-between items-center px-6 py-5">
+    <span class="text-lg font-bold text-gray-900 tracking-tight">Memento</span>
+    <div class="flex items-center gap-4">
+        {avatar}
+        <div class="text-right hidden sm:block">
+            <div class="text-sm font-medium text-gray-700">{name or email}</div>
+            <a href="/auth/logout" class="text-xs text-gray-400 hover:text-gray-600">Sign out</a>
+        </div>
     </div>
-    <div class="grid">{cards if cards else '<p style="color:#9ca3af;font-size:0.875rem">No projects yet.</p>'}</div>
-    <div style="margin-top:1.5rem">
-        <a href="/new" style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;background:#6366f1;color:#fff;border-radius:0.375rem;font-size:0.875rem;text-decoration:none">
+</nav>
+
+<main class="max-w-4xl mx-auto px-6 pt-6 pb-20">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">Your projects</h1>
+            <p class="text-sm text-gray-400 mt-0.5">{len(configs)} project{'s' if len(configs) != 1 else ''}</p>
+        </div>
+        <a href="/new" class="inline-flex items-center gap-1.5 text-sm font-medium text-white bg-indigo-500 px-4 py-2 rounded-lg hover:bg-indigo-600 transition">
             + New project
         </a>
     </div>
-</div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {cards}{empty_state}
+    </div>
+</main>
+
 </body></html>'''
 
 

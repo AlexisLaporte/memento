@@ -180,7 +180,7 @@ def _render_markdown(text: str) -> tuple[str, str]:
         },
         attributes={
             '*': {'id', 'class', 'style'},
-            'a': {'href', 'title', 'target', 'rel'},
+            'a': {'href', 'title', 'target'},
             'img': {'src', 'alt', 'title', 'width', 'height'},
             'input': {'type', 'checked', 'disabled'},
             'td': {'colspan', 'rowspan', 'align'},

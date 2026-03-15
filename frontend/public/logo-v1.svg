@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- M as open book: two pages meeting at center spine -->
+  <path d="M20 85 L20 35 L60 55 L100 35 L100 85" stroke="#2a5a4a" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <line x1="60" y1="55" x2="60" y2="85" stroke="#2a5a4a" stroke-width="7" stroke-linecap="round"/>
+  <!-- Small bookmark accent -->
+  <path d="M76 28 L76 45 L82 40 L88 45 L88 28 Z" fill="#c87941"/>
+</svg>

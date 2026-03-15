@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- M with document page fold -->
+  <rect x="18" y="18" width="84" height="84" rx="8" fill="#2a5a4a"/>
+  <!-- Page fold triangle -->
+  <path d="M102 18 L102 42 L78 18 Z" fill="#1e3a32"/>
+  <path d="M78 18 L102 42" stroke="#f2ebe0" stroke-width="1" opacity="0.3"/>
+  <!-- M letterform in negative -->
+  <path d="M34 80 L34 42 L52 62 L60 52 L68 62 L86 42 L86 80" stroke="#f2ebe0" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Minimal geometric M with accent dot -->
+  <path d="M22 90 L22 30 L60 60 L98 30 L98 90" stroke="#2a5a4a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Accent dot at the valley -->
+  <circle cx="60" cy="62" r="6" fill="#c87941"/>
+</svg>

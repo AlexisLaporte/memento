@@ -11,7 +11,8 @@ class ProjectConfig:
     installation_id: int = 0
     docs_paths: list[str] = field(default_factory=lambda: ["docs"])
     allowed_files: list[str] = field(default_factory=list)
-    allowed_domains: list[str] = field(default_factory=list)
+
     owner_email: str = ""
     color: str = "#6366F1"
+    custom_domain: str = ""
     default_branch: str = "main"

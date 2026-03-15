@@ -4,7 +4,7 @@ import base64
 
 import markdown
 import yaml
-from flask import Blueprint, g, jsonify, render_template
+from flask import Blueprint, g, jsonify
 from httpx import HTTPStatusError
 
 from ..auth import requires_access
@@ -22,15 +22,6 @@ _md = markdown.Markdown(extensions=[
 ], extension_configs={
     'codehilite': {'css_class': 'highlight', 'guess_lang': False},
 })
-
-
-# ─── Route: project index ────────────────────────────────────────────────────
-
-@docs_bp.route('/')
-@docs_bp.route('/<path:doc_path>')
-@requires_access
-def index(doc_path=None):
-    return render_template('index.html', config=g.config, project_slug=g.project)
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────

@@ -28,8 +28,13 @@ def ensure_schema():
                     allowed_files TEXT[] DEFAULT '{}',
                     allowed_domains TEXT[] DEFAULT '{}',
                     color TEXT DEFAULT '#6366F1',
+                    custom_domain TEXT DEFAULT '',
                     created_at TIMESTAMP DEFAULT NOW()
                 )
+            """)
+            # Migration: add custom_domain if missing
+            cur.execute("""
+                ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS custom_domain TEXT DEFAULT ''
             """)
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS memento_members (
@@ -50,12 +55,12 @@ def _row_to_config(row) -> ProjectConfig:
         slug=row[0], title=row[1], repo_full_name=row[2],
         installation_id=row[3], owner_email=row[4] or '',
         docs_paths=row[5] or ['docs'], allowed_files=row[6] or [],
-        allowed_domains=row[7] or [], color=row[8] or '#6366F1',
+        color=row[7] or '#6366F1', custom_domain=row[8] or '',
     )
 
 
 _PROJECT_COLS = """slug, title, repo_full_name, installation_id,
-    owner_email, docs_paths, allowed_files, allowed_domains, color"""
+    owner_email, docs_paths, allowed_files, color, custom_domain"""
 
 
 # ─── Projects CRUD ───────────────────────────────────────────────────────────
@@ -78,8 +83,7 @@ def get_project(slug: str) -> ProjectConfig | None:
 
 
 def load_projects_for_user(email: str) -> dict[str, ProjectConfig]:
-    """Projects where user is a member OR email domain is allowed."""
-    domain = email.split('@')[-1]
+    """Projects where user is an active member."""
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(f"""
@@ -87,9 +91,9 @@ def load_projects_for_user(email: str) -> dict[str, ProjectConfig]:
                 WHERE EXISTS (
                     SELECT 1 FROM memento_members m
                     WHERE m.project_slug = p.slug AND m.email = %s AND m.role != 'blocked'
-                ) OR %s = ANY(p.allowed_domains)
+                )
                 ORDER BY p.created_at
-            """, (email, domain))
+            """, (email,))
             return {row[0]: _row_to_config(row) for row in cur.fetchall()}
 
 
@@ -100,13 +104,12 @@ def create_project(slug: str, title: str, repo_full_name: str,
         with conn.cursor() as cur:
             cur.execute("""
                 INSERT INTO memento_projects (slug, title, repo_full_name, installation_id,
-                    owner_email, docs_paths, allowed_files, allowed_domains, color)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    owner_email, docs_paths, allowed_files, color)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 slug, title, repo_full_name, installation_id, owner_email,
                 kwargs.get('docs_paths', ['docs']),
                 kwargs.get('allowed_files', []),
-                kwargs.get('allowed_domains', []),
                 kwargs.get('color', '#6366F1'),
             ))
             # Auto-add owner as admin
@@ -121,7 +124,7 @@ def create_project(slug: str, title: str, repo_full_name: str,
 def update_project(slug: str, **kwargs):
     """Update project fields."""
     allowed = {'title', 'repo_full_name', 'installation_id', 'docs_paths',
-               'allowed_files', 'allowed_domains', 'color'}
+               'allowed_files', 'color', 'custom_domain'}
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
         return
@@ -131,6 +134,15 @@ def update_project(slug: str, **kwargs):
         with conn.cursor() as cur:
             cur.execute(f"UPDATE memento_projects SET {set_clause} WHERE slug = %s", values)
         conn.commit()
+
+
+def get_project_by_domain(domain: str) -> ProjectConfig | None:
+    """Look up a project by its custom domain."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(f"SELECT {_PROJECT_COLS} FROM memento_projects WHERE custom_domain = %s", (domain,))
+            row = cur.fetchone()
+            return _row_to_config(row) if row else None
 
 
 def delete_project(slug: str):

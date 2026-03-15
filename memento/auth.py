@@ -2,20 +2,18 @@
 
 Roles: blocked (no access), member (default), admin (manage users).
 Members stored in memento_members table (unified).
-Auth identity via Auth0, access control per-project.
-Dev mode (MEMENTO_DEV=1): skip auth entirely, auto-login as admin.
+Auth identity via Auth0, access control per-project via explicit membership.
 """
 
 import os
 from functools import wraps
 
-from flask import Blueprint, abort, g, redirect, request, session, url_for, jsonify
+from flask import Blueprint, abort, g, jsonify, redirect, request, session, url_for
 
 from . import db
 
 auth_bp = Blueprint('auth', __name__)
 
-_dev_mode = False
 oauth = None
 
 
@@ -23,12 +21,6 @@ oauth = None
 
 def init_auth(app):
     """Initialize Auth0 OAuth globally."""
-    global _dev_mode
-    _dev_mode = os.getenv('MEMENTO_DEV', '') == '1'
-
-    if _dev_mode:
-        return
-
     from authlib.integrations.flask_client import OAuth
     global oauth
 
@@ -50,8 +42,6 @@ def requires_auth(f):
     """Require authenticated user (any project)."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if _dev_mode:
-            return f(*args, **kwargs)
         user = session.get('user')
         if not user:
             session['next'] = request.url
@@ -64,9 +54,6 @@ def requires_access(f):
     """Require authenticated + authorized user for the current project."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if _dev_mode:
-            return f(*args, **kwargs)
-
         user = session.get('user')
         if not user:
             if request.is_json or request.path.startswith(f'/{g.project}/api/'):
@@ -76,35 +63,16 @@ def requires_access(f):
 
         email = user['email']
         config = g.config
-        domain = email.split('@')[-1]
 
-        # Check access: domain allowlist or explicit membership
-        allowed = (
-            domain in config.allowed_domains
-            or db.member_exists(g.project, email)
-        )
-        if not allowed:
-            return f'''<!DOCTYPE html>
-<html><head><title>Access denied</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center">
-<div class="text-center">
-<p class="text-red-500 font-medium mb-2">Access denied</p>
-<p class="text-gray-500 text-sm mb-4">{email} is not authorized for {config.title}.<br>Ask an admin to invite you.</p>
-<a href="/" class="text-indigo-600 hover:underline text-sm">Back</a>
-</div></body></html>''', 403
+        if not db.member_exists(g.project, email):
+            return jsonify({"error": f"{email} is not a member of {config.title}"}), 403
 
         # Upsert member and get role
         role = db.upsert_member(g.project, email, user['name'], user.get('picture', ''))
         g.user_role = role
 
         if role == 'blocked':
-            return f'''<!DOCTYPE html>
-<html><head><title>Access pending</title><script src="https://cdn.tailwindcss.com"></script></head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center">
-<div class="text-center">
-<p class="text-gray-500 mb-2">Your access is pending approval.</p>
-<a href="{url_for('auth.logout')}" class="hover:underline text-sm" style="color:{config.color}">Logout</a>
-</div></body></html>''', 403
+            return jsonify({"error": "Your access is pending approval"}), 403
 
         return f(*args, **kwargs)
     return decorated
@@ -115,8 +83,6 @@ def requires_admin(f):
     @wraps(f)
     @requires_access
     def decorated(*args, **kwargs):
-        if _dev_mode:
-            return f(*args, **kwargs)
         email = session['user']['email']
         is_admin = g.user_role == 'admin' or g.config.owner_email == email
         if not is_admin:
@@ -129,8 +95,6 @@ def requires_super_admin(f):
     """Require super admin (global Memento admin)."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if _dev_mode:
-            return f(*args, **kwargs)
         user = session.get('user')
         if not user:
             session['next'] = request.url
@@ -142,24 +106,10 @@ def requires_super_admin(f):
     return decorated
 
 
-def has_project_access(slug: str, config, email: str) -> bool:
-    """Check if a user has access to a project (for the project selector)."""
-    domain = email.split('@')[-1]
-    if domain in config.allowed_domains:
-        return True
-    if _dev_mode:
-        return False
-    return db.member_exists(slug, email)
-
-
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
 @auth_bp.route('/login')
 def login():
-    if _dev_mode:
-        session['user'] = {'email': 'dev@local', 'name': 'Dev', 'picture': ''}
-        next_url = request.args.get('next', '/')
-        return redirect(next_url)
     next_url = request.args.get('next') or session.get('next', '/')
     session['next'] = next_url
     redirect_uri = url_for('auth.callback', _external=True)
@@ -188,8 +138,6 @@ def logout():
     client_id = os.getenv('AUTH0_CLIENT_ID')
     return_to = request.host_url.rstrip('/')
     session.clear()
-    if _dev_mode:
-        return redirect('/')
     return redirect(
         f'https://{auth0_domain}/v2/logout?client_id={client_id}&returnTo={return_to}'
     )

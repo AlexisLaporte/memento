@@ -40,8 +40,7 @@ def _check_access(email: str, slug: str) -> ProjectConfig:
     config = get_project(slug)
     if not config:
         raise ValueError(f"Project '{slug}' not found")
-    domain = email.split('@')[-1]
-    if domain not in config.allowed_domains and not member_exists(slug, email):
+    if not member_exists(slug, email):
         raise ValueError(f"Access denied to '{slug}'")
     config.default_branch = _resolve_branch(config)
     return config

@@ -9,8 +9,10 @@ import yaml
 from flask import Blueprint, Response, g, jsonify, request
 from httpx import HTTPStatusError
 
+import httpx
+
 from ..auth import requires_access
-from ..github_app import github_api
+from ..github_app import get_installation_token, github_api
 
 docs_bp = Blueprint('docs', __name__)
 
@@ -314,7 +316,17 @@ def api_raw(doc_path: str):
             return jsonify({"error": "Not found"}), 404
         return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
 
-    raw = base64.b64decode(data['content'])
+    if data.get('content'):
+        raw = base64.b64decode(data['content'])
+    elif data.get('download_url'):
+        # Large files (>1MB): GitHub Contents API omits base64 content
+        token = get_installation_token(config.installation_id)
+        resp = httpx.get(data['download_url'], headers={'Authorization': f'Bearer {token}'}, follow_redirects=True)
+        resp.raise_for_status()
+        raw = resp.content
+    else:
+        return jsonify({"error": "File content unavailable"}), 502
+
     return Response(raw, content_type=content_type, headers={
         'Content-Disposition': 'inline',
         'Cache-Control': 'private, max-age=300',

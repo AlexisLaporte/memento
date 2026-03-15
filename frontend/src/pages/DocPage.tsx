@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api'
 import { DocViewer } from '@/components/DocViewer'
+import { TocSidebar } from '@/components/TocSidebar'
 
 interface DocData {
   path: string
@@ -72,10 +73,16 @@ export default function DocPage() {
     ? `https://github.com/${config.repo_full_name}/edit/main/`
     : undefined
 
+  const currentDoc = docPath ? (doc || null) : null
+
   return (
     <div className="h-full flex">
+      {currentDoc?.kind === 'markdown' && (
+        <TocSidebar headings={currentDoc.toc || []} />
+      )}
       <DocViewer
-        doc={docPath ? (doc || null) : null}
+        doc={currentDoc}
+        project={project}
         editBaseUrl={editBaseUrl}
         prevDoc={prevDoc}
         nextDoc={nextDoc}

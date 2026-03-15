@@ -1,17 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 
-interface TocHeading {
-  level: number
-  id: string
-  text: string
-}
-
 interface DocData {
   path: string
   kind: string
   frontmatter?: Record<string, string>
   html?: string
-  toc?: TocHeading[]
+  toc?: { level: number; id: string; text: string }[]
   content?: string
   download_url?: string
   size?: number
@@ -30,32 +24,6 @@ function statusVariant(status: string) {
   return 'bg-muted text-muted-foreground'
 }
 
-function TocSidebar({ headings, activeId }: { headings: TocHeading[]; activeId: string }) {
-  if (headings.length < 2) return null
-
-  return (
-    <nav className="hidden xl:block w-52 shrink-0 sticky top-6 self-start max-h-[calc(100vh-3rem)] overflow-y-auto">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">On this page</p>
-      <ul className="space-y-0.5 text-sm">
-        {headings.map(h => (
-          <li key={h.id} style={{ paddingLeft: `${(h.level - 2) * 0.75}rem` }}>
-            <a
-              href={`#${h.id}`}
-              className={`block py-0.5 transition-colors truncate ${
-                activeId === h.id
-                  ? 'text-primary font-medium'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {h.text}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  )
-}
-
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
   return (
@@ -66,32 +34,6 @@ function CopyButton({ text }: { text: string }) {
       {copied ? 'Copied!' : 'Copy'}
     </button>
   )
-}
-
-function useActiveHeading(headings: TocHeading[]): string {
-  const [activeId, setActiveId] = useState('')
-
-  useEffect(() => {
-    if (headings.length < 2) return
-    const observer = new IntersectionObserver(
-      entries => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id)
-            break
-          }
-        }
-      },
-      { rootMargin: '-80px 0px -70% 0px', threshold: 0 }
-    )
-    headings.forEach(h => {
-      const el = document.getElementById(h.id)
-      if (el) observer.observe(el)
-    })
-    return () => observer.disconnect()
-  }, [headings])
-
-  return activeId
 }
 
 function ImageViewer({ doc }: { doc: DocData }) {
@@ -152,22 +94,24 @@ function PdfViewer({ doc }: { doc: DocData }) {
 
 export function DocViewer({
   doc,
+  project,
   editBaseUrl,
   prevDoc,
   nextDoc,
   onNavigate,
 }: {
   doc: DocData | null
+  project?: string
   editBaseUrl?: string
   prevDoc?: NavDoc | null
   nextDoc?: NavDoc | null
   onNavigate?: (path: string) => void
 }) {
   const contentRef = useRef<HTMLDivElement>(null)
-  const headings = doc?.toc || []
-  const activeId = useActiveHeading(headings)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const tooltipCache = useRef<Map<string, { title: string; excerpt: string }>>(new Map())
 
-  // Mermaid + copy buttons on code blocks
+  // Mermaid + copy buttons + doc link tooltips
   useEffect(() => {
     if (!contentRef.current) return
     const container = contentRef.current
@@ -205,7 +149,78 @@ export function DocViewer({
       pre.classList.add('group')
       pre.appendChild(btn)
     })
-  }, [doc?.path, doc?.html])
+
+    // Doc link tooltips
+    if (!project || !doc?.path) return
+    const docDir = doc.path.includes('/') ? doc.path.substring(0, doc.path.lastIndexOf('/') + 1) : ''
+    let hideTimeout: ReturnType<typeof setTimeout>
+
+    // Create tooltip element once
+    if (!tooltipRef.current) {
+      const tip = document.createElement('div')
+      tip.className = 'doc-link-tooltip'
+      tip.innerHTML = '<div class="tooltip-title"></div><div class="tooltip-excerpt"></div>'
+      document.body.appendChild(tip)
+      tooltipRef.current = tip
+    }
+    const tooltip = tooltipRef.current
+
+    function showTooltip(anchor: HTMLAnchorElement, data: { title: string; excerpt: string }) {
+      const titleEl = tooltip.querySelector('.tooltip-title') as HTMLElement
+      const excerptEl = tooltip.querySelector('.tooltip-excerpt') as HTMLElement
+      titleEl.textContent = data.title
+      excerptEl.textContent = data.excerpt
+      const rect = anchor.getBoundingClientRect()
+      tooltip.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 336))}px`
+      tooltip.style.top = `${rect.bottom + 6}px`
+      tooltip.classList.add('visible')
+    }
+
+    function hideTooltip() {
+      hideTimeout = setTimeout(() => tooltip.classList.remove('visible'), 100)
+    }
+
+    const mdLinks = container.querySelectorAll<HTMLAnchorElement>('a[href$=".md"]')
+    const cleanups: (() => void)[] = []
+
+    mdLinks.forEach(link => {
+      const href = link.getAttribute('href') || ''
+      if (href.startsWith('http') || href.startsWith('#')) return
+      const resolvedPath = href.startsWith('/') ? href.slice(1) : docDir + href
+
+      const onEnter = async () => {
+        clearTimeout(hideTimeout)
+        const cached = tooltipCache.current.get(resolvedPath)
+        if (cached) { showTooltip(link, cached); return }
+        try {
+          const res = await fetch(`/${project}/api/doc/${encodeURI(resolvedPath)}`)
+          if (!res.ok) return
+          const data = await res.json()
+          const title = data.frontmatter?.title || resolvedPath.split('/').pop()?.replace(/\.md$/i, '') || resolvedPath
+          let excerpt = data.frontmatter?.summary || ''
+          if (!excerpt && data.html) {
+            const tmp = document.createElement('div')
+            tmp.innerHTML = data.html
+            const firstP = tmp.querySelector('p')
+            excerpt = firstP?.textContent?.slice(0, 200) || ''
+          }
+          const entry = { title, excerpt }
+          tooltipCache.current.set(resolvedPath, entry)
+          showTooltip(link, entry)
+        } catch { /* ignore */ }
+      }
+      const onLeave = () => hideTooltip()
+
+      link.addEventListener('mouseenter', onEnter)
+      link.addEventListener('mouseleave', onLeave)
+      cleanups.push(() => {
+        link.removeEventListener('mouseenter', onEnter)
+        link.removeEventListener('mouseleave', onLeave)
+      })
+    })
+
+    return () => { cleanups.forEach(fn => fn()); clearTimeout(hideTimeout) }
+  }, [doc?.path, doc?.html, project])
 
   if (!doc) {
     return (
@@ -224,59 +239,54 @@ export function DocViewer({
   const title = fm.title || doc.path.split('/').pop()?.replace(/\.md$/, '') || ''
 
   return (
-    <div className="flex-1 flex overflow-hidden">
-      <div className="flex-1 overflow-y-auto px-4 py-4 md:p-6">
-        {/* Frontmatter bar */}
-        <div className="mb-4 pb-3 border-b">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold">{title}</h1>
-            {fm.status && (
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusVariant(fm.status)}`}>
-                {fm.status}
-              </span>
-            )}
-          </div>
-          {fm.summary && <p className="text-sm text-muted-foreground mt-1">{fm.summary}</p>}
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-xs text-muted-foreground font-mono">{doc.path}</span>
-            {editBaseUrl && (
-              <a href={`${editBaseUrl}${doc.path}`} target="_blank" className="text-xs text-primary hover:underline">
-                Edit on GitHub
-              </a>
-            )}
-          </div>
+    <div className="flex-1 overflow-y-auto px-4 py-4 md:p-6">
+      {/* Frontmatter bar */}
+      <div className="mb-4 pb-3 border-b">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h1 className="text-xl font-bold">{title}</h1>
+          {fm.status && (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusVariant(fm.status)}`}>
+              {fm.status}
+            </span>
+          )}
         </div>
-
-        {/* Rendered markdown */}
-        <div ref={contentRef} className="prose" dangerouslySetInnerHTML={{ __html: doc.html || '' }} />
-
-        {/* Prev / Next navigation */}
-        {(prevDoc || nextDoc) && (
-          <div className="flex items-center justify-between mt-8 pt-4 border-t gap-4">
-            {prevDoc ? (
-              <button
-                onClick={() => onNavigate?.(prevDoc.path)}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-w-0"
-              >
-                <span className="shrink-0">←</span>
-                <span className="truncate">{prevDoc.name.replace(/\.md$/i, '')}</span>
-              </button>
-            ) : <span />}
-            {nextDoc ? (
-              <button
-                onClick={() => onNavigate?.(nextDoc.path)}
-                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-w-0 ml-auto"
-              >
-                <span className="truncate">{nextDoc.name.replace(/\.md$/i, '')}</span>
-                <span className="shrink-0">→</span>
-              </button>
-            ) : <span />}
-          </div>
-        )}
+        {fm.summary && <p className="text-sm text-muted-foreground mt-1">{fm.summary}</p>}
+        <div className="flex items-center gap-3 mt-2">
+          <span className="text-xs text-muted-foreground font-mono">{doc.path}</span>
+          {editBaseUrl && (
+            <a href={`${editBaseUrl}${doc.path}`} target="_blank" className="text-xs text-primary hover:underline">
+              Edit on GitHub
+            </a>
+          )}
+        </div>
       </div>
 
-      {/* TOC sidebar */}
-      <TocSidebar headings={headings} activeId={activeId} />
+      {/* Rendered markdown */}
+      <div ref={contentRef} className="prose" dangerouslySetInnerHTML={{ __html: doc.html || '' }} />
+
+      {/* Prev / Next navigation */}
+      {(prevDoc || nextDoc) && (
+        <div className="flex items-center justify-between mt-8 pt-4 border-t gap-4">
+          {prevDoc ? (
+            <button
+              onClick={() => onNavigate?.(prevDoc.path)}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-w-0"
+            >
+              <span className="shrink-0">←</span>
+              <span className="truncate">{prevDoc.name.replace(/\.md$/i, '')}</span>
+            </button>
+          ) : <span />}
+          {nextDoc ? (
+            <button
+              onClick={() => onNavigate?.(nextDoc.path)}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors min-w-0 ml-auto"
+            >
+              <span className="truncate">{nextDoc.name.replace(/\.md$/i, '')}</span>
+              <span className="shrink-0">→</span>
+            </button>
+          ) : <span />}
+        </div>
+      )}
     </div>
   )
 }

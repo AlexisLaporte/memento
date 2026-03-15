@@ -102,10 +102,15 @@
 .prose h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; }
 .prose h3 { font-size: 1.1rem; font-weight: 600; margin-top: 1rem; margin-bottom: 0.5rem; }
 .prose h4, .prose h5, .prose h6 { font-size: 1rem; font-weight: 600; margin-top: 0.75rem; margin-bottom: 0.25rem; }
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 { scroll-margin-top: 1.5rem; }
 .prose p { margin: 0.5rem 0; line-height: 1.7; color: #6a7a6e; }
 .prose ul, .prose ol { margin: 0.5rem 0; padding-left: 1.5rem; }
 .prose li { margin: 0.2rem 0; color: #6a7a6e; }
-.prose ul { list-style-type: disc; }
+.prose ul { list-style: none; padding-left: 1.25rem; }
+.prose ul > li { position: relative; }
+.prose ul > li::before { content: '•'; position: absolute; left: -1rem; font-weight: 700; color: var(--primary); }
+.prose ul ul > li::before { content: '◦'; }
+.prose ul ul ul > li::before { content: '▪'; font-size: 0.75em; }
 .prose ol { list-style-type: decimal; }
 .prose a { color: #2a5a4a; text-decoration: underline; text-underline-offset: 2px; }
 .prose a:hover { color: #1e3a32; }
@@ -116,7 +121,7 @@
 .prose table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .prose th, .prose td { border: 1px solid var(--border); padding: 0.5rem 0.75rem; text-align: left; }
 .prose th { background: var(--muted); font-weight: 600; }
-.prose blockquote { border-left: 3px solid #6a7a6e; padding-left: 1rem; margin: 0.75rem 0; color: var(--muted-foreground); }
+.prose blockquote { border-left: 4px solid var(--primary); padding: 0.75rem 1rem; margin: 0.75rem 0; background: #2a5a4a0f; border-radius: 0 0.5rem 0.5rem 0; color: var(--muted-foreground); }
 .prose strong { font-weight: 600; color: var(--foreground); }
 .prose hr { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 .prose .highlight { background: oklch(0.15 0 0); border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 0.75rem 0; }
@@ -130,3 +135,28 @@
 
 /* Responsive images in prose */
 .prose img { max-width: 100%; height: auto; border-radius: 8px; }
+
+/* Doc link tooltip */
+.doc-link-tooltip {
+  position: fixed;
+  z-index: 100;
+  max-width: 320px;
+  padding: 0.75rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.doc-link-tooltip.visible { opacity: 1; }
+.doc-link-tooltip .tooltip-title { font-weight: 600; font-size: 0.875rem; margin-bottom: 0.25rem; color: var(--foreground); }
+.doc-link-tooltip .tooltip-excerpt { font-size: 0.8rem; color: var(--muted-foreground); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Print styles */
+@media print {
+  aside, .no-print { display: none !important; }
+  .prose { max-width: 100%; }
+  body { background: white; color: black; }
+}

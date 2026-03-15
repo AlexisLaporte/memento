@@ -40,7 +40,6 @@ function useAppContext() {
     return { context: 'dashboard' as const, project: null, subPath: '' }
   }
 
-  // Check if it's a special sub-route
   const sub = segments[1] || ''
   const isSpecial = ['settings', 'issues'].includes(sub)
   const docPath = isSpecial ? '' : segments.slice(1).join('/')
@@ -62,42 +61,40 @@ function DashboardSidebar() {
   })
 
   return (
-    <>
-      <nav className="flex-1 overflow-y-auto px-3 py-2">
-        <div className="flex items-center justify-between mb-1 px-1">
-          <span className="text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider">Projects</span>
+    <nav className="flex-1 overflow-y-auto px-3 py-2">
+      <div className="flex items-center justify-between mb-1 px-1">
+        <span className="text-xs font-medium text-sidebar-foreground/50 uppercase tracking-wider">Projects</span>
+        <Link
+          to="/new"
+          className="text-xs text-sidebar-primary hover:text-sidebar-primary/80 font-medium"
+        >
+          + New
+        </Link>
+      </div>
+      <div className="space-y-0.5">
+        {projects.map(p => (
           <Link
-            to="/new"
-            className="text-xs text-sidebar-primary hover:text-sidebar-primary/80 font-medium"
+            key={p.slug}
+            to={`/${p.slug}/`}
+            className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm hover:bg-sidebar-accent transition-colors"
           >
-            + New
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
+            <span className="truncate">{p.title}</span>
+          </Link>
+        ))}
+      </div>
+
+      {user?.is_super_admin && (
+        <div className="mt-4 pt-3 border-t border-sidebar-border">
+          <Link
+            to="/admin"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent transition-colors"
+          >
+            Admin
           </Link>
         </div>
-        <div className="space-y-0.5">
-          {projects.map(p => (
-            <Link
-              key={p.slug}
-              to={`/${p.slug}/`}
-              className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm hover:bg-sidebar-accent transition-colors"
-            >
-              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
-              <span className="truncate">{p.title}</span>
-            </Link>
-          ))}
-        </div>
-
-        {user?.is_super_admin && (
-          <div className="mt-4 pt-3 border-t border-sidebar-border">
-            <Link
-              to="/admin"
-              className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent transition-colors"
-            >
-              Admin
-            </Link>
-          </div>
-        )}
-      </nav>
-    </>
+      )}
+    </nav>
   )
 }
 

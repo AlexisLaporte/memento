@@ -6,7 +6,12 @@ import App from './App'
 import './index.css'
 
 const queryClient = new QueryClient({
-  defaultOptions: { queries: { refetchOnWindowFocus: false } },
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000,  // 5 min — avoid refetching GitHub API on every navigation
+    },
+  },
 })
 
 createRoot(document.getElementById('root')!).render(

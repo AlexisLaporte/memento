@@ -14,7 +14,6 @@ export function useAuth() {
   const { data, isLoading } = useQuery({
     queryKey: ['me'],
     queryFn: () => apiGet<User>('/api/me'),
-    staleTime: 5 * 60 * 1000,
     retry: false,
   })
 

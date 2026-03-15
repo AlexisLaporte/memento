@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { apiGet } from '@/lib/api'
 import { DocViewer } from '@/components/DocViewer'
+import { FolderView } from '@/components/FolderView'
 
 interface DocData {
   path: string
@@ -39,27 +40,53 @@ function flattenTree(nodes: TreeNode[]): { path: string; name: string }[] {
   return result
 }
 
+function findSubtree(nodes: TreeNode[], path: string): TreeNode[] | null {
+  if (!path) return nodes
+  for (const node of nodes) {
+    if (node.type === 'dir' && node.path === path) return node.children || []
+    if (node.type === 'dir' && node.children) {
+      const found = findSubtree(node.children, path)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+function isDirectory(nodes: TreeNode[], path: string): boolean {
+  if (!path) return true
+  for (const node of nodes) {
+    if (node.type === 'dir' && node.path === path) return true
+    if (node.type === 'dir' && node.children) {
+      if (isDirectory(node.children, path)) return true
+    }
+  }
+  return false
+}
+
 export default function DocPage() {
   const { project, '*': splat } = useParams()
   const navigate = useNavigate()
   const docPath = splat || ''
   const projectBase = `/${project}`
 
-  const { data: doc } = useQuery({
+  const { data: tree = [] } = useQuery({
+    queryKey: ['tree', project],
+    queryFn: () => apiGet<TreeNode[]>(`${projectBase}/api/tree`),
+  })
+
+  const isDirPath = useMemo(() => isDirectory(tree, docPath), [tree, docPath])
+
+  const { data: doc, isLoading: docLoading } = useQuery({
     queryKey: ['doc', project, docPath],
     queryFn: () => apiGet<DocData>(`${projectBase}/api/doc/${encodeURI(docPath)}`),
-    enabled: !!docPath,
+    enabled: !!docPath && !isDirPath,
+    staleTime: 0,
   })
 
   const { data: settings } = useQuery({
     queryKey: ['settings', project],
     queryFn: () => apiGet<{ project: ProjectConfig; is_owner: boolean }>(`${projectBase}/api/settings`).catch(() => null),
     retry: false,
-  })
-
-  const { data: tree = [] } = useQuery({
-    queryKey: ['tree', project],
-    queryFn: () => apiGet<TreeNode[]>(`${projectBase}/api/tree`),
   })
 
   const flatFiles = useMemo(() => flattenTree(tree), [tree])
@@ -72,14 +99,31 @@ export default function DocPage() {
     ? `https://github.com/${config.repo_full_name}/edit/main/`
     : undefined
 
+  const handleNavigate = (path: string) => navigate(`${projectBase}/${path}`)
+
+  // Show folder view for root or directory paths
+  if (isDirPath) {
+    const folderContents = findSubtree(tree, docPath) || []
+    return (
+      <div className="h-full flex">
+        <FolderView
+          path={docPath}
+          nodes={folderContents}
+          projectTitle={config?.title || project || ''}
+          onNavigate={handleNavigate}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="h-full flex">
       <DocViewer
-        doc={docPath ? (doc || null) : null}
+        doc={docLoading ? undefined : (doc || null)}
         editBaseUrl={editBaseUrl}
         prevDoc={prevDoc}
         nextDoc={nextDoc}
-        onNavigate={(path) => navigate(`${projectBase}/${path}`)}
+        onNavigate={handleNavigate}
       />
     </div>
   )

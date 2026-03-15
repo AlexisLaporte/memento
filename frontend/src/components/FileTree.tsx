@@ -27,18 +27,28 @@ function fileLabel(node: TreeNode): string {
 
 function TreeDir({ node, activePath, onSelect }: { node: TreeNode } & Omit<FileTreeProps, 'nodes'>) {
   const [open, setOpen] = useState(() => isAncestor(node, activePath))
+  const isActive = node.path === activePath
 
   return (
     <div>
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1 w-full px-1.5 py-0.5 rounded text-sm font-medium text-foreground hover:bg-accent"
-      >
-        <span className={`text-[10px] text-muted-foreground transition-transform ${open ? 'rotate-90' : ''}`}>
-          {'\u25B6'}
-        </span>
-        {node.name}
-      </button>
+      <div className={`flex items-center gap-0 rounded text-sm font-medium ${
+        isActive ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-accent'
+      }`}>
+        <button
+          onClick={(e) => { e.stopPropagation(); setOpen(!open) }}
+          className="px-1.5 py-0.5 shrink-0"
+        >
+          <span className={`text-[10px] text-muted-foreground transition-transform inline-block ${open ? 'rotate-90' : ''}`}>
+            {'\u25B6'}
+          </span>
+        </button>
+        <button
+          onClick={() => { onSelect(node.path); if (!open) setOpen(true) }}
+          className="flex-1 text-left py-0.5 pr-1.5 truncate"
+        >
+          {node.name}
+        </button>
+      </div>
       {open && (
         <div className="ml-3 border-l pl-1">
           {node.children?.map(child => (

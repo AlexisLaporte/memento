@@ -6,7 +6,7 @@ import re
 import markdown
 import nh3
 import yaml
-from flask import Blueprint, g, jsonify, request
+from flask import Blueprint, Response, g, jsonify, request
 from httpx import HTTPStatusError
 
 from ..auth import requires_access
@@ -249,20 +249,12 @@ def api_doc(doc_path: str):
             return jsonify({"error": "Not found"}), 404
         return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
 
-    if kind == 'image':
-        # Return download URL for images
+    if kind in ('image', 'pdf'):
+        slug = config.slug
         return jsonify({
             "path": doc_path,
-            "kind": "image",
-            "download_url": data.get('download_url', ''),
-            "size": data.get('size', 0),
-        })
-
-    if kind == 'pdf':
-        return jsonify({
-            "path": doc_path,
-            "kind": "pdf",
-            "download_url": data.get('download_url', ''),
+            "kind": kind,
+            "download_url": f'/{slug}/api/raw/{doc_path}',
             "size": data.get('size', 0),
         })
 
@@ -288,6 +280,44 @@ def api_doc(doc_path: str):
         "kind": "text",
         "content": content,
         "size": len(raw),
+    })
+
+
+_CONTENT_TYPES = {
+    '.pdf': 'application/pdf',
+    '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif', '.svg': 'image/svg+xml', '.webp': 'image/webp',
+    '.ico': 'image/x-icon', '.bmp': 'image/bmp',
+}
+
+
+@docs_bp.route('/api/raw/<path:doc_path>')
+@requires_access
+def api_raw(doc_path: str):
+    """Proxy binary files (PDF, images) from GitHub with correct Content-Type."""
+    config = g.config
+    if not config.repo_full_name or not config.installation_id:
+        return jsonify({"error": "Repo not configured"}), 400
+    if not _is_allowed(doc_path, config.docs_paths, config.allowed_files):
+        return jsonify({"error": "Not found"}), 404
+
+    ext = '.' + doc_path.rsplit('.', 1)[-1].lower() if '.' in doc_path else ''
+    content_type = _CONTENT_TYPES.get(ext, 'application/octet-stream')
+
+    try:
+        data = github_api(
+            config.installation_id,
+            f'/repos/{config.repo_full_name}/contents/{doc_path}',
+        )
+    except HTTPStatusError as e:
+        if e.response.status_code == 404:
+            return jsonify({"error": "Not found"}), 404
+        return jsonify({"error": f"GitHub API error: {e.response.status_code}"}), 502
+
+    raw = base64.b64decode(data['content'])
+    return Response(raw, content_type=content_type, headers={
+        'Content-Disposition': 'inline',
+        'Cache-Control': 'private, max-age=300',
     })
 
 

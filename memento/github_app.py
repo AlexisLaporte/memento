@@ -47,17 +47,31 @@ def get_installation_token(installation_id: int) -> str:
     return token
 
 
-def github_api(installation_id: int, path: str, params: dict | None = None) -> dict | list:
-    """Authenticated GET to GitHub API using installation token."""
+def github_api(
+    installation_id: int,
+    path: str,
+    params: dict | None = None,
+    method: str = 'GET',
+    json_body: dict | None = None,
+) -> dict | list:
+    """Authenticated request to GitHub API using installation token."""
     token = get_installation_token(installation_id)
-    resp = httpx.get(
-        f'https://api.github.com{path}',
-        headers={
-            'Authorization': f'Bearer {token}',
-            'Accept': 'application/vnd.github+json',
-        },
-        params=params or {},
-        follow_redirects=True,
-    )
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Accept': 'application/vnd.github+json',
+    }
+    url = f'https://api.github.com{path}'
+
+    if method == 'GET':
+        resp = httpx.get(url, headers=headers, params=params or {}, follow_redirects=True)
+    elif method == 'PUT':
+        resp = httpx.put(url, headers=headers, json=json_body or {})
+    elif method == 'POST':
+        resp = httpx.post(url, headers=headers, json=json_body or {})
+    elif method == 'DELETE':
+        resp = httpx.delete(url, headers=headers, json=json_body or {})
+    else:
+        raise ValueError(f"Unsupported HTTP method: {method}")
+
     resp.raise_for_status()
     return resp.json()

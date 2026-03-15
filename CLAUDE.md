@@ -46,7 +46,7 @@ frontend/                # React SPA (Vite)
 ```bash
 # Dev
 cd frontend && npm run dev   # Vite dev server (proxies to Flask)
-MEMENTO_DEV=1 python -m memento.app  # Flask dev mode (no auth, port 5002)
+python -m memento.app         # Flask dev (port 5002, Auth0 required)
 
 # Build
 cd frontend && npm run build  # Build SPA to dist/
@@ -60,6 +60,7 @@ uvicorn memento.mcp_server:app --host 127.0.0.1 --port 5004
 - `/<project>/` — doc viewer (SPA, client-side routing)
 - `/<project>/api/tree` — doc file tree (JSON)
 - `/<project>/api/doc/<path>` — rendered markdown / file content (JSON)
+- `/<project>/api/raw/<path>` — binary file proxy (PDF, images) with correct Content-Type
 - `/<project>/api/issues` — GitHub issues
 - `/<project>/issues` — issues page (SPA)
 - `/<project>/settings` — project settings (SPA)

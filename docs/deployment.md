@@ -32,7 +32,6 @@ Env file: `/opt/memento/.env`
 ### Optional
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MEMENTO_DEV` | `""` | Set `1` for dev mode (no auth) |
 | `MEMENTO_HOST` | `memento.local` | Main host for custom domain detection |
 | `MEMENTO_SUPER_ADMINS` | `""` | Comma-separated admin emails |
 | `MEMENTO_BASE_URL` | `https://memento.otomata.tech` | Used in emails |
@@ -46,11 +45,17 @@ Env file: `/opt/memento/.env`
 ## CI/CD
 
 `.github/workflows/deploy.yml` — on push to `master`:
-1. SSH to server
-2. `git pull origin master`
-3. `pip install -e .` (backend deps)
-4. `cd frontend && npm install && npx tsc -b && npx vite build` (frontend build)
-5. `systemctl restart memento memento-mcp`
+
+**Job 1 — build** (GitHub runner):
+1. `npm ci && npm run build` (frontend)
+2. Upload `frontend/dist/` as artifact
+
+**Job 2 — deploy** (SSH to server):
+1. `git pull origin master`
+2. `pip install -e .` (backend deps)
+3. SCP `frontend/dist/` to server
+4. `systemctl restart memento memento-mcp`
+5. `nginx -t && systemctl reload nginx`
 
 Deploy key: GitHub secret `SSH_PRIVATE_KEY` (no passphrase).
 

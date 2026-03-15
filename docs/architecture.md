@@ -14,7 +14,6 @@ Multi-tenant Flask API + React SPA with per-project GitHub integration and MCP r
 | owner_email | TEXT | Project creator |
 | docs_paths | TEXT[] | Directories to expose (default `{docs}`, `{/}` = all) |
 | allowed_files | TEXT[] | Root-level files to expose |
-| allowed_domains | TEXT[] | Auto-access email domains |
 | color | TEXT | Theme color hex |
 | custom_domain | TEXT | Optional custom domain (CNAME to memento.otomata.tech) |
 
@@ -98,6 +97,7 @@ GitHub contents API  → base64 decode → _parse_frontmatter()
 - `_is_allowed(path, docs_paths, allowed_files)` — path gating (`/` = wildcard)
 - `_render_markdown()` — Python markdown → HTML → **nh3 sanitization** (strips script, event handlers)
 - Supported file types: markdown, text/code, images, PDF
+- Binary files (PDF, images): proxied via `/api/raw/<path>` with correct `Content-Type` and `Content-Disposition: inline`
 - Frontend receives HTML and renders via `dangerouslySetInnerHTML` (safe because sanitized server-side)
 
 ## Frontend (React SPA)

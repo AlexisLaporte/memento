@@ -216,10 +216,19 @@ function ProjectSidebar({ project, activePath }: { project: string; activePath: 
   )
 }
 
+const MIN_WIDTH = 180
+const MAX_WIDTH = 400
+const DEFAULT_WIDTH = 240
+
 export function AppSidebar({ mobileOpen, onClose, onSearchOpen }: { mobileOpen?: boolean; onClose?: () => void; onSearchOpen?: () => void }) {
   const { user } = useAuth()
   const { context, project, subPath } = useAppContext()
   const location = useLocation()
+  const [width, setWidth] = useState(() => {
+    const saved = localStorage.getItem('sidebar-width')
+    return saved ? Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, parseInt(saved))) : DEFAULT_WIDTH
+  })
+  const dragging = useRef(false)
 
   // Close mobile sidebar on navigation
   const prevPath = useRef(location.pathname)
@@ -230,15 +239,42 @@ export function AppSidebar({ mobileOpen, onClose, onSearchOpen }: { mobileOpen?:
     }
   }, [location.pathname, onClose])
 
+  // Drag resize
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!dragging.current) return
+      const newWidth = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, e.clientX))
+      setWidth(newWidth)
+    }
+    function onUp() {
+      if (!dragging.current) return
+      dragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      localStorage.setItem('sidebar-width', String(width))
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+    return () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp) }
+  }, [width])
+
   if (!user) return null
 
   return (
-    <aside className={`
-      fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-sidebar border-r border-sidebar-border
-      transition-transform duration-200 ease-in-out
-      md:relative md:z-auto md:w-60 md:translate-x-0 md:shrink-0
-      ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
-    `}>
+    <aside
+      className={`
+        fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar border-r border-sidebar-border
+        transition-transform duration-200 ease-in-out
+        md:relative md:z-auto md:translate-x-0 md:shrink-0
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}
+      style={{ width: `${width}px` }}
+    >
+      {/* Drag handle */}
+      <div
+        className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 active:bg-primary/30 z-10 hidden md:block"
+        onMouseDown={() => { dragging.current = true; document.body.style.cursor = 'col-resize'; document.body.style.userSelect = 'none' }}
+      />
       {/* Header */}
       <div className="px-4 py-3 border-b border-sidebar-border flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">

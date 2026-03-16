@@ -124,11 +124,11 @@ def callback():
         return redirect('/new')
     token = oauth.auth0.authorize_access_token()
     userinfo = token.get('userinfo', {})
-    session['user'] = {
-        'email': userinfo.get('email', ''),
-        'name': userinfo.get('name', ''),
-        'picture': userinfo.get('picture', ''),
-    }
+    email = userinfo.get('email', '')
+    name = userinfo.get('name', '')
+    picture = userinfo.get('picture', '')
+    session['user'] = {'email': email, 'name': name, 'picture': picture}
+    db.upsert_user(email, name, picture, auth0_sub=userinfo.get('sub', ''))
     next_url = session.pop('next', '/')
     return redirect(next_url)
 

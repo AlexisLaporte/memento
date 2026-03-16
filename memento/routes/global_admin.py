@@ -27,6 +27,12 @@ def api_admin_projects():
     } for slug, p in projects.items()])
 
 
+@global_admin_bp.route('/api/admin/users')
+@requires_super_admin
+def api_admin_users():
+    return jsonify(db.list_users())
+
+
 @global_admin_bp.route('/api/admin/projects/<slug>', methods=['DELETE'])
 @requires_super_admin
 def api_admin_delete_project(slug):

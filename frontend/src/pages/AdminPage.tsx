@@ -13,6 +13,14 @@ interface AdminProject {
   owner_email: string
 }
 
+interface AdminUser {
+  email: string
+  name: string
+  picture: string
+  created_at: string
+  last_login_at: string
+}
+
 export default function AdminPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -20,6 +28,12 @@ export default function AdminPage() {
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['admin-projects'],
     queryFn: () => apiGet<AdminProject[]>('/api/admin/projects'),
+    enabled: !!user?.is_super_admin,
+  })
+
+  const { data: users = [], isLoading: usersLoading } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: () => apiGet<AdminUser[]>('/api/admin/users'),
     enabled: !!user?.is_super_admin,
   })
 
@@ -106,6 +120,41 @@ export default function AdminPage() {
             ))}
           </div>
         </>
+      )}
+
+      <h2 className="text-lg font-semibold mt-10 mb-4">Users ({users.length})</h2>
+      {usersLoading ? (
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      ) : (
+        <div className="bg-card rounded-lg border overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Signed up</TableHead>
+                <TableHead>Last login</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.length === 0 ? (
+                <TableRow><TableCell colSpan={4} className="text-center text-muted-foreground py-6">No users</TableCell></TableRow>
+              ) : users.map(u => (
+                <TableRow key={u.email}>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {u.picture && <img src={u.picture} alt="" className="w-6 h-6 rounded-full" />}
+                      <span className="text-sm">{u.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{new Date(u.last_login_at).toLocaleDateString()}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </main>
   )

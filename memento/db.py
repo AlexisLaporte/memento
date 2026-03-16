@@ -46,6 +46,16 @@ def ensure_schema():
                     PRIMARY KEY (project_slug, email)
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS memento_users (
+                    email TEXT PRIMARY KEY,
+                    name TEXT,
+                    picture TEXT,
+                    auth0_sub TEXT,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    last_login_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
         conn.commit()
 
 
@@ -247,3 +257,33 @@ def delete_member(project_slug: str, email: str):
                 (project_slug, email),
             )
         conn.commit()
+
+
+# ─── Users CRUD ─────────────────────────────────────────────────────────────
+
+def upsert_user(email: str, name: str, picture: str, auth0_sub: str = ''):
+    """Track user login — insert on first visit, update last_login on return."""
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO memento_users (email, name, picture, auth0_sub)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (email) DO UPDATE
+                    SET name = EXCLUDED.name, picture = EXCLUDED.picture,
+                        last_login_at = NOW()
+            """, (email, name, picture, auth0_sub))
+        conn.commit()
+
+
+def list_users() -> list[dict]:
+    with connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT email, name, picture, auth0_sub, created_at, last_login_at
+                FROM memento_users ORDER BY created_at DESC
+            """)
+            return [
+                {"email": r[0], "name": r[1], "picture": r[2], "auth0_sub": r[3],
+                 "created_at": str(r[4]), "last_login_at": str(r[5])}
+                for r in cur.fetchall()
+            ]

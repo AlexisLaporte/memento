@@ -15,7 +15,7 @@ Multi-tenant Flask API + React SPA with per-project GitHub integration and MCP r
 | docs_paths | TEXT[] | Directories to expose (default `{docs}`, `{/}` = all) |
 | allowed_files | TEXT[] | Root-level files to expose |
 | color | TEXT | Theme color hex |
-| custom_domain | TEXT | Optional custom domain (CNAME to memento.otomata.tech) |
+| custom_domain | TEXT | Optional custom domain (CNAME to mento.cc) |
 
 ### memento_members
 | Column | Type | Description |
@@ -86,16 +86,29 @@ Key functions in `github_app.py`:
 - `get_installation_token(id)` — cached installation access token
 - `github_api(id, path, params, method, json_body)` — authenticated GitHub API request (GET/PUT/POST/DELETE)
 
+Key functions in `repo.py`:
+- `clone_repo(slug, repo, install_id, branch)` — shallow clone to disk
+- `pull_repo(slug, install_id)` — fast-forward pull with fresh token
+- `list_files(slug)` — walk directory, return flat list (GitHub trees format)
+- `read_file(slug, path)` — read raw bytes with path traversal protection
+- `sync_all_projects()` — clone all projects missing a local clone
+
 ## Doc Rendering Pipeline
 
+Docs are served from **local git clones** on disk (managed by `repo.py`), not from the GitHub API.
+
 ```
-GitHub git/trees API → _build_tree() → nested JSON tree (filtered by docs_paths)
-GitHub contents API  → base64 decode → _parse_frontmatter()
-                     → _render_markdown() → nh3.clean() → sanitized HTML
+repo.py: clone_repo() / pull_repo()  → local clone in MEMENTO_REPOS_DIR (/opt/memento/repos)
+repo.list_files(slug)                → _build_tree() → nested JSON tree (filtered by docs_paths)
+repo.read_file(slug, path)           → _parse_frontmatter()
+                                     → _render_markdown() → nh3.clean() → sanitized HTML
 ```
 
+- `repo.py` — shallow clones repos on project creation, pulls on webhook push events
+- Path traversal protection: `read_file()` validates `realpath` stays within repo dir
 - `_is_allowed(path, docs_paths, allowed_files)` — path gating (`/` = wildcard)
 - `_render_markdown()` — Python markdown → HTML → **nh3 sanitization** (strips script, event handlers)
+- In-memory TTL cache (30s) on tree and doc endpoints to reduce filesystem walks
 - Supported file types: markdown, text/code, images, PDF
 - Binary files (PDF, images): proxied via `/api/raw/<path>` with correct `Content-Type` and `Content-Disposition: inline`
 - Frontend receives HTML and renders via `dangerouslySetInnerHTML` (safe because sanitized server-side)
@@ -116,7 +129,7 @@ Mobile: sidebar becomes a drawer, hamburger menu in sticky header.
 Separate ASGI process (FastMCP on port 5004), OAuth2 via Auth0:
 
 ```
-claude.ai → https://mcp.memento.otomata.tech/mcp
+claude.ai → https://mcp.mento.cc/mcp
           → OAuth2 (Auth0, DCR proxy)
           → Auth0 login → access token with email claim
           → MCP tool calls
@@ -134,7 +147,7 @@ claude.ai → https://mcp.memento.otomata.tech/mcp
 
 Auth0 post-login Action injects email into access token:
 ```js
-api.accessToken.setCustomClaim('https://memento.otomata.tech/email', event.user.email);
+api.accessToken.setCustomClaim('https://mento.cc/email', event.user.email);
 ```
 
 ## Security

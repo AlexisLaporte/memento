@@ -22,7 +22,7 @@ const sections = [
     items: [
       { q: 'What is MCP?', a: 'The Model Context Protocol lets AI assistants like Claude read and edit your documentation. Add the Mento MCP server URL in your AI client to get started.' },
       { q: 'What can AI do with my docs?', a: 'List projects, browse the doc tree, read files, create or update documents, and query GitHub issues — all through natural language.' },
-      { q: 'What\'s the MCP server URL?', a: 'Connect your AI client to https://mcp.memento.otomata.tech/mcp — you\'ll authenticate via your Mento account.' },
+      { q: 'What\'s the MCP server URL?', a: 'Connect your AI client to https://mcp.mento.cc/mcp — you\'ll authenticate via your Mento account.' },
     ],
   },
   {

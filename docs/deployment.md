@@ -1,13 +1,13 @@
 # Deployment
 
-Production on `memento.otomata.tech` (51.15.225.121).
+Production on `mento.cc` (51.15.225.121).
 
 ## Services
 
 | Service | Port | Process | Domain |
 |---------|------|---------|--------|
-| memento | 5002 | gunicorn (Flask WSGI) | memento.otomata.tech |
-| memento-mcp | 5004 | uvicorn (ASGI) | mcp.memento.otomata.tech |
+| memento | 5002 | gunicorn (Flask WSGI) | mento.cc |
+| memento-mcp | 5004 | uvicorn (ASGI) | mcp.mento.cc |
 
 Systemd units: `/etc/systemd/system/memento.service`, `/etc/systemd/system/memento-mcp.service`
 Working directory: `/opt/memento`
@@ -34,12 +34,13 @@ Env file: `/opt/memento/.env`
 |----------|---------|-------------|
 | `MEMENTO_HOST` | `memento.local` | Main host for custom domain detection |
 | `MEMENTO_SUPER_ADMINS` | `""` | Comma-separated admin emails |
-| `MEMENTO_BASE_URL` | `https://memento.otomata.tech` | Used in emails |
+| `MEMENTO_BASE_URL` | `https://mento.cc` | Used in emails |
 | `RESEND_API_KEY` | — | Resend API key for invitation emails |
 | `RESEND_FROM_EMAIL` | `noreply@otomata.tech` | Sender address |
-| `AUTH0_MCP_AUDIENCE` | `https://mcp.memento.otomata.tech/` | Auth0 API audience for MCP |
-| `MCP_BASE_URL` | `https://mcp.memento.otomata.tech` | MCP server public URL |
+| `AUTH0_MCP_AUDIENCE` | `https://mcp.mento.cc/` | Auth0 API audience for MCP |
+| `MCP_BASE_URL` | `https://mcp.mento.cc` | MCP server public URL |
 | `MCP_PORT` | `5003` | MCP server port |
+| `MEMENTO_REPOS_DIR` | `/opt/memento/repos` | Local git clone storage directory |
 | `GITHUB_APP_NAME` | `memento-document` | For install URL in project creation |
 
 ## CI/CD
@@ -62,11 +63,11 @@ Deploy key: GitHub secret `SSH_PRIVATE_KEY` (no passphrase).
 ## Auth0 Setup
 
 - **Application**: Regular Web App (authlib integration)
-- **API**: audience `https://mcp.memento.otomata.tech/` (for MCP tokens)
-- **Callback URLs**: `https://memento.otomata.tech/auth/callback`
+- **API**: audience `https://mcp.mento.cc/` (for MCP tokens)
+- **Callback URLs**: `https://mento.cc/auth/callback`
 - **Post-Login Action**: adds email claim to access tokens for MCP:
   ```js
-  api.accessToken.setCustomClaim('https://memento.otomata.tech/email', event.user.email);
+  api.accessToken.setCustomClaim('https://mento.cc/email', event.user.email);
   ```
 
 ## GitHub App
@@ -75,10 +76,10 @@ Deploy key: GitHub secret `SSH_PRIVATE_KEY` (no passphrase).
 - **ID**: 3078636
 - **Client ID**: `Iv23lioCvLQveA2B7qx8`
 - **Permissions**: Contents (read+write), Issues (read), Metadata (read)
-- **Webhook URL**: `https://memento.otomata.tech/api/webhook/github`
+- **Webhook URL**: `https://mento.cc/api/webhook/github`
 - **Callback URLs**:
-  - `https://memento.otomata.tech/auth/callback` (setup redirect after install)
-  - `https://memento.otomata.tech/auth/github/callback` (OAuth user token)
+  - `https://mento.cc/auth/callback` (setup redirect after install)
+  - `https://mento.cc/auth/github/callback` (OAuth user token)
 
 ## Database
 
@@ -93,6 +94,9 @@ git clone https://github.com/AlexisLaporte/memento .
 python3 -m venv venv
 venv/bin/pip install -e .
 cd frontend && npm install && npx vite build
+
+# Clone all project repos locally
+python -m memento.repo sync
 
 # Copy .env with all required vars
 # Copy systemd units and nginx configs

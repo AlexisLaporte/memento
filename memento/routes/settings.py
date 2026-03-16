@@ -33,7 +33,7 @@ def api_get_settings():
         },
         "members": members,
         "is_owner": _is_owner(),
-        "mcp_url": "https://mcp.memento.otomata.tech/mcp",
+        "mcp_url": "https://mcp.mento.cc/mcp",
     })
 
 

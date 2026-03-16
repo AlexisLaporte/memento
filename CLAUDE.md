@@ -18,10 +18,11 @@ memento/
 ├── db.py             # PostgreSQL CRUD (projects, members)
 ├── email.py          # Resend invitation emails
 ├── github_app.py     # GitHub App JWT + installation tokens + API client
+├── repo.py           # Local git clone management (clone, pull, serve files)
 ├── mcp_auth.py       # MCP OAuth via Auth0Provider
 ├── mcp_server.py     # FastMCP server (6 tools: list/read/create/update docs, issues)
 └── routes/
-    ├── docs.py       # Doc tree, markdown rendering, search API
+    ├── docs.py       # Doc tree, markdown rendering, search API (reads from local clone)
     ├── github.py     # GitHub issues/labels/milestones API
     ├── projects.py   # Project CRUD, installations, user info
     ├── settings.py   # Per-project settings, members, invitations
@@ -31,12 +32,13 @@ frontend/                # React SPA (Vite)
 ├── src/
 │   ├── App.tsx          # Router + sidebar layout
 │   ├── components/
-│   │   ├── AppSidebar.tsx   # Persistent sidebar (dashboard/project context)
+│   │   ├── AppSidebar.tsx   # Resizable sidebar (dashboard/project context)
 │   │   ├── DocViewer.tsx    # Markdown/image/text/PDF renderer
+│   │   ├── TocSidebar.tsx   # Table of contents sidebar for docs
 │   │   ├── FileTree.tsx     # Collapsible doc tree
 │   │   ├── SearchModal.tsx  # Global search (Cmd+K)
 │   │   └── IssuesTable.tsx  # GitHub issues table
-│   ├── pages/           # DashboardPage, DocPage, NewProjectPage, SettingsPage, etc.
+│   ├── pages/           # DashboardPage, DocPage, NewProjectPage, SettingsPage, HelpPage, LegalPage
 │   ├── hooks/use-auth.ts
 │   └── lib/api.ts       # Fetch wrapper
 └── dist/                # Built assets (served by Flask/nginx)
@@ -83,10 +85,11 @@ uvicorn memento.mcp_server:app --host 127.0.0.1 --port 5004
 - **Project**: slug + GitHub repo + access rules. Stored in `memento_projects` table.
 - **Installation**: GitHub App install on an org/user. Provides repo access tokens.
 - **GitHub OAuth**: Separate from Auth0 login. Users connect GitHub to see their installations when creating projects. Token stored in session.
-- **MCP connector**: FastMCP remote server on port 5004, OAuth2 via Auth0 with DCR proxy. Users add `https://mcp.memento.otomata.tech/mcp` in claude.ai. 6 tools: list_projects, get_doc_tree, read_doc, create_doc, update_doc, list_issues.
+- **MCP connector**: FastMCP remote server on port 5004, OAuth2 via Auth0 with DCR proxy. Users add `https://mcp.mento.cc/mcp` in claude.ai. 6 tools: list_projects, get_doc_tree, read_doc, create_doc, update_doc, list_issues.
 
 ## Docs
 Detailed docs in `docs/`:
 - `architecture.md` — Auth flow, data model, multi-tenancy, MCP integration, security
 - `deployment.md` — Production setup, env vars, CI/CD, infra
 - `design-assets.md` — Color palette, fonts, logo, illustrations (Firefly prompts)
+- `github-marketplace-listing.md` — Marketplace listing copy and setup details

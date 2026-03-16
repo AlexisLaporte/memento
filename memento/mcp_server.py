@@ -1,4 +1,4 @@
-"""MCP remote server — exposes Memento docs to claude.ai."""
+"""MCP remote server — exposes Mento docs to claude.ai."""
 
 import base64
 import os
@@ -16,8 +16,8 @@ from .mcp_auth import create_auth_provider, get_user_email
 from .routes.docs import _build_tree, _is_allowed, _parse_frontmatter
 
 mcp = FastMCP(
-    name="Memento Docs",
-    instructions="Access documentation and GitHub issues for projects hosted on Memento.",
+    name="Mento",
+    instructions="Access documentation and GitHub issues for projects hosted on Mento.",
     auth=create_auth_provider(),
 )
 

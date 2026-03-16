@@ -242,8 +242,8 @@ export function AppSidebar({ mobileOpen, onClose, onSearchOpen }: { mobileOpen?:
       {/* Header */}
       <div className="px-4 py-3 border-b border-sidebar-border flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/logo-book.svg" alt="Memento" className="h-6 w-6" />
-          <span className="text-base font-bold tracking-tight font-serif">Memento</span>
+          <img src="/logo-book.svg" alt="Mento" className="h-6 w-6" />
+          <span className="text-base font-bold tracking-tight font-serif">Mento</span>
         </Link>
         <button onClick={onClose} className="p-1 md:hidden" aria-label="Close menu">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

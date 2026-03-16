@@ -1,4 +1,4 @@
-"""Flask application factory for Memento — multi-project docs portal."""
+"""Flask application factory for Mento — multi-project docs portal."""
 
 import os
 

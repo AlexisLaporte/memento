@@ -87,7 +87,7 @@ function ProjectSettingsForm({ config, projectBase, queryClient }: {
         <div>
           <Label className="text-xs">Custom domain</Label>
           <Input value={customDomain} onChange={e => setCustomDomain(e.target.value)} placeholder="docs.example.com" className="mt-1" />
-          <p className="text-xs text-muted-foreground mt-1">Point a CNAME to <code className="text-primary">memento.otomata.tech</code> in your DNS</p>
+          <p className="text-xs text-muted-foreground mt-1">Point a CNAME to <code className="text-primary">mento.cc</code> in your DNS</p>
         </div>
         <div className="flex items-center gap-3">
           <Button type="submit" size="sm" disabled={mut.isPending}>{mut.isPending ? 'Saving...' : 'Save settings'}</Button>

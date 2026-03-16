@@ -1,5 +1,5 @@
 /**
- * CSS-only mockup of the Memento interface (file tree + doc viewer).
+ * CSS-only mockup of the Mento interface (file tree + doc viewer).
  * Used as a visual in the hero section.
  */
 export function AppMockup() {
@@ -22,7 +22,7 @@ export function AppMockup() {
           <div className="w-2.5 h-2.5 rounded-full bg-yellow-400/60" />
           <div className="w-2.5 h-2.5 rounded-full bg-green-400/60" />
         </div>
-        <span className="text-[10px] text-muted-foreground ml-2 font-mono">memento.otomata.tech/stock</span>
+        <span className="text-[10px] text-muted-foreground ml-2 font-mono">mento.cc/stock</span>
       </div>
 
       <div className="flex h-[280px]">

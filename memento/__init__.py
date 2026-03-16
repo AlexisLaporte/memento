@@ -1,1 +1,1 @@
-"""Memento — Reusable documentation portal."""
+"""Mento — Reusable documentation portal."""

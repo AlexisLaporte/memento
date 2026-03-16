@@ -1,4 +1,4 @@
-"""Auth0 OAuth + role-based access for Memento.
+"""Auth0 OAuth + role-based access for Mento.
 
 Roles: blocked (no access), member (default), admin (manage users).
 Members stored in memento_members table (unified).
@@ -93,7 +93,7 @@ def requires_admin(f):
 
 
 def requires_super_admin(f):
-    """Require super admin (global Memento admin)."""
+    """Require super admin (global Mento admin)."""
     @wraps(f)
     def decorated(*args, **kwargs):
         user = session.get('user')

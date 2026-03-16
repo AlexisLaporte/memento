@@ -99,7 +99,7 @@ export default function NewProjectPage() {
               <p className="text-xs text-muted-foreground mt-1">
                 Don't see your account?{' '}
                 <a href={`https://github.com/apps/${appInfo.name}/installations/new`} target="_blank" className="text-primary hover:underline">
-                  Install the Memento GitHub App
+                  Install the Mento GitHub App
                 </a>
               </p>
             )}

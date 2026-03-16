@@ -1,4 +1,4 @@
-# Memento
+# Mento
 
 Multi-tenant documentation portal — renders GitHub markdown with team access control and AI (MCP) integration.
 

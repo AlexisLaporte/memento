@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { AppSidebar } from '@/components/AppSidebar'
 import { SearchModal } from '@/components/SearchModal'
@@ -10,6 +10,7 @@ import AdminPage from '@/pages/AdminPage'
 import DocPage from '@/pages/DocPage'
 import IssuesPage from '@/pages/IssuesPage'
 import SettingsPage from '@/pages/SettingsPage'
+import HelpPage from '@/pages/HelpPage'
 
 export default function App() {
   const { isLoading, isAuthenticated } = useAuth()
@@ -38,6 +39,12 @@ export default function App() {
     )
   }
 
+  const { pathname } = useLocation()
+
+  if (pathname === '/help') {
+    return <HelpPage />
+  }
+
   if (!isAuthenticated) {
     return <WelcomePage />
   }
@@ -57,7 +64,7 @@ export default function App() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 12h18M3 6h18M3 18h18" />
             </svg>
           </button>
-          <span className="text-sm font-bold tracking-tight font-serif flex-1">Memento</span>
+          <span className="text-sm font-bold tracking-tight font-serif flex-1">Mento</span>
           <button onClick={() => setSearchOpen(true)} className="p-1" aria-label="Search">
             <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 @dataclass
 class ProjectConfig:
     slug: str = ""
-    title: str = "Memento"
+    title: str = "Mento"
     repo_full_name: str = ""
     installation_id: int = 0
     docs_paths: list[str] = field(default_factory=lambda: ["docs"])

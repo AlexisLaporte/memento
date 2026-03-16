@@ -34,13 +34,23 @@ function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string
   return <span ref={ref}>{display}{suffix}</span>
 }
 
+function Img({ src, alt = '', className }: { src: string; alt?: string; className?: string }) {
+  const webp = src.replace(/\.png$/, '.webp')
+  return (
+    <picture>
+      <source srcSet={webp} type="image/webp" />
+      <img src={src} alt={alt} className={className} />
+    </picture>
+  )
+}
+
 /* ─── Data ────────────────────────────────────────────────────────────────── */
 
 const features = [
   {
     icon: GitHubIcon,
     title: 'GitHub-native',
-    desc: 'Your docs live in your repo. Push markdown, Memento renders it instantly — file tree, frontmatter, syntax highlighting, Mermaid diagrams.',
+    desc: 'Your docs live in your repo. Push markdown, Mento renders it instantly — file tree, frontmatter, syntax highlighting, Mermaid diagrams.',
     img: '/illust-code.png',
   },
   {
@@ -85,14 +95,14 @@ export default function WelcomePage() {
       {/* Hero — full-width image */}
       <section className="relative min-h-[90vh] flex items-center">
         {/* Background image */}
-        <img src="/illust-collab.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <Img src="/illust-collab.png" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-foreground/80 via-foreground/50 to-transparent" />
 
         {/* Nav overlaid */}
         <nav className="absolute top-0 left-0 right-0 z-20 max-w-6xl mx-auto flex justify-between items-center px-4 sm:px-8 py-4 sm:py-6">
           <a href="/" className="flex items-center gap-3">
-            <img src="/logo-book.svg" alt="Memento" className="h-10 w-10 brightness-0 invert" />
-            <span className="text-xl font-bold tracking-tight font-serif text-white">Memento</span>
+            <img src="/logo-book.svg" alt="Mento" className="h-10 w-10 brightness-0 invert" />
+            <span className="text-xl font-bold tracking-tight font-serif text-white">Mento</span>
           </a>
           <a
             href="/auth/login?next=/"
@@ -123,7 +133,7 @@ export default function WelcomePage() {
             variants={fadeUp} initial="hidden" animate="visible" custom={2}
             className="text-lg text-white/75 max-w-lg mt-6 leading-relaxed"
           >
-            Memento turns your GitHub markdown into a clean, secure portal.
+            Mento turns your GitHub markdown into a clean, secure portal.
             Invite your team. Control access. Let AI read your docs too.
           </motion.p>
           <motion.div
@@ -205,7 +215,7 @@ export default function WelcomePage() {
                 <p className="text-muted-foreground leading-relaxed">{f.desc}</p>
               </div>
               <div className="flex items-center">
-                <img src={f.img} alt={f.title} className="w-full h-40 rounded-xl object-cover" />
+                <Img src={f.img} alt={f.title} className="w-full h-40 rounded-xl object-cover" />
               </div>
             </motion.div>
           ))}
@@ -288,7 +298,7 @@ export default function WelcomePage() {
           className="relative rounded-3xl overflow-hidden"
         >
           {/* Background image */}
-          <img src="/illust-aerial.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <Img src="/illust-aerial.png" className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-foreground/60 backdrop-blur-[2px]" />
           <div className="relative rounded-3xl p-12 md:p-20 text-center">
             <h2 className="text-3xl md:text-5xl font-bold mb-4 font-serif text-white" style={{ letterSpacing: '-0.02em' }}>
@@ -311,8 +321,8 @@ export default function WelcomePage() {
       <footer className="max-w-6xl mx-auto px-4 sm:px-8 py-8 border-t border-foreground/[0.06]">
         <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <img src="/logo-book.svg" alt="Memento" className="h-5 w-5" />
-          <span className="text-sm font-medium tracking-tight font-serif">Memento</span>
+          <img src="/logo-book.svg" alt="Mento" className="h-5 w-5" />
+          <span className="text-sm font-medium tracking-tight font-serif">Mento</span>
         </div>
           <p className="text-xs text-muted-foreground">
             <a href="https://github.com/AlexisLaporte/memento" className="hover:text-foreground transition" target="_blank">

@@ -57,3 +57,25 @@ def webhook():
             pass
 
     return jsonify({"ok": True})
+
+
+@global_admin_bp.route('/api/webhook/marketplace', methods=['POST'])
+def marketplace_webhook():
+    """Handle GitHub Marketplace events (purchase, cancellation, plan change)."""
+    import logging
+    log = logging.getLogger(__name__)
+
+    secret = os.getenv('GITHUB_MARKETPLACE_WEBHOOK_SECRET', '')
+    if secret:
+        signature = request.headers.get('X-Hub-Signature-256', '')
+        expected = 'sha256=' + hmac.new(
+            secret.encode(), request.data, hashlib.sha256,
+        ).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            abort(403)
+
+    payload = request.get_json()
+    action = payload.get('action', '') if payload else ''
+    log.info("Marketplace event: %s", action)
+
+    return jsonify({"ok": True})

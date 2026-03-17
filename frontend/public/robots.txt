@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /auth/
+Disallow: /api/
+Disallow: /admin
+Disallow: /new
+Disallow: /*/api/
+Disallow: /*/settings
+
+Sitemap: https://mento.cc/sitemap.xml

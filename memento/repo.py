@@ -20,10 +20,6 @@ def repo_exists(slug: str) -> bool:
     return os.path.isdir(os.path.join(repo_path(slug), '.git'))
 
 
-def _auth_url(repo_full_name: str, token: str) -> str:
-    return f'https://x-access-token:{token}@github.com/{repo_full_name}.git'
-
-
 def clone_repo(slug: str, repo_full_name: str, installation_id: int, branch: str = 'main') -> None:
     """Shallow clone a repo. Raises RuntimeError on failure."""
     token = get_installation_token(installation_id)
@@ -31,9 +27,11 @@ def clone_repo(slug: str, repo_full_name: str, installation_id: int, branch: str
     os.makedirs(REPOS_DIR, exist_ok=True)
     if os.path.exists(dest):
         shutil.rmtree(dest)
+    repo_url = f'https://github.com/{repo_full_name}.git'
     result = subprocess.run(
-        ['git', 'clone', '--depth', '1', '--single-branch', '--branch', branch,
-         _auth_url(repo_full_name, token), dest],
+        ['git', '-c', f'url.https://x-access-token:{token}@github.com/.insteadOf=https://github.com/',
+         'clone', '--depth', '1', '--single-branch', '--branch', branch,
+         repo_url, dest],
         capture_output=True, text=True, timeout=120,
     )
     if result.returncode != 0:

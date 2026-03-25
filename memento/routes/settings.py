@@ -86,7 +86,7 @@ def api_invite():
     email = data['email'].strip().lower()
     name = data.get('name', '').strip()
     db.invite_member(g.project, email, name)
-    from ..email import send_invite_email
+    from ..mail_sender import send_invite_email
     invited_by = session.get('user', {}).get('email', 'an admin')
     send_invite_email(email, name, g.config.title, g.project, invited_by)
     return jsonify({"ok": True})

@@ -19,9 +19,9 @@ def create_app() -> Flask:
         static_folder=None,  # No Flask static — served by SPA or nginx
     )
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'memento-dev-secret')
+    app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'mento-dev-secret')
 
-    main_host = os.getenv('MEMENTO_HOST', 'memento.local')
+    main_host = os.getenv('MENTO_HOST', 'mento.local')
 
     # Ensure DB schema
     from .db import ensure_schema

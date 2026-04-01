@@ -67,7 +67,7 @@ def api_me():
     user = session.get('user')
     if not user:
         return jsonify({"authenticated": False})
-    admins = [e.strip() for e in os.getenv('MEMENTO_SUPER_ADMINS', '').split(',') if e.strip()]
+    admins = [e.strip() for e in os.getenv('MENTO_SUPER_ADMINS', '').split(',') if e.strip()]
     return jsonify({
         "authenticated": True,
         "email": user['email'],

@@ -15,7 +15,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    allowedHosts: ['memento.local'],
+    allowedHosts: ['mento.local'],
     proxy: {
       '/auth': 'http://localhost:5002',
       '/api': 'http://localhost:5002',

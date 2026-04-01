@@ -1,7 +1,7 @@
 """Auth0 OAuth + role-based access for Mento.
 
 Roles: blocked (no access), member (default), admin (manage users).
-Members stored in memento_members table (unified).
+Members stored in mento_members table (unified).
 Auth identity via Auth0, access control per-project via explicit membership.
 """
 
@@ -119,7 +119,7 @@ def requires_super_admin(f):
         if not user:
             session['next'] = request.url
             return redirect(url_for('auth.login'))
-        admins = [e.strip() for e in os.getenv('MEMENTO_SUPER_ADMINS', '').split(',') if e.strip()]
+        admins = [e.strip() for e in os.getenv('MENTO_SUPER_ADMINS', '').split(',') if e.strip()]
         if user['email'] not in admins:
             abort(403)
         return f(*args, **kwargs)

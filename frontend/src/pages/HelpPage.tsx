@@ -82,7 +82,7 @@ export default function HelpPage() {
           <p className="text-sm text-muted-foreground mb-4">Open an issue on GitHub or reach out by email.</p>
           <div className="flex items-center justify-center gap-4">
             <a
-              href="https://github.com/AlexisLaporte/memento/issues"
+              href="https://github.com/AlexisLaporte/mento/issues"
               target="_blank"
               className="text-sm font-medium text-primary hover:underline"
             >

@@ -7,7 +7,7 @@ import resend
 
 log = logging.getLogger(__name__)
 
-BASE_URL = os.getenv('MEMENTO_BASE_URL', 'https://mento.cc')
+BASE_URL = os.getenv('MENTO_BASE_URL', 'https://mento.cc')
 
 
 def _init():

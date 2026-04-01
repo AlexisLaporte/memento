@@ -1,20 +1,20 @@
 import pytest
 from flask import Flask, session, url_for
-from memento.auth import auth_bp, _is_safe_url
+from mento.auth import auth_bp, _is_safe_url
 
 def test_is_safe_url():
     app = Flask(__name__)
-    app.config['SERVER_NAME'] = 'memento.local'
+    app.config['SERVER_NAME'] = 'mento.local'
     app.register_blueprint(auth_bp)
 
-    with app.test_request_context(base_url='http://memento.local'):
+    with app.test_request_context(base_url='http://mento.local'):
         # Safe relative URLs
         assert _is_safe_url('/') is True
         assert _is_safe_url('/projects') is True
         assert _is_safe_url('docs/intro.md') is True
 
         # Safe absolute URLs (same host)
-        assert _is_safe_url('http://memento.local/dashboard') is True
+        assert _is_safe_url('http://mento.local/dashboard') is True
 
         # Unsafe URLs (different host)
         assert _is_safe_url('http://malicious.com') is False
@@ -28,9 +28,9 @@ def test_is_safe_url():
 def test_login_redirect_safety():
     app = Flask(__name__)
     app.secret_key = 'test'
-    app.config['SERVER_NAME'] = 'memento.local'
+    app.config['SERVER_NAME'] = 'mento.local'
     # Mocking oauth since it's not initialized
-    from memento import auth
+    from mento import auth
     class MockOAuth:
         def __init__(self):
             self.auth0 = MockAuth0()

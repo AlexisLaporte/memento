@@ -6,12 +6,12 @@ Multi-tenant documentation portal — renders GitHub markdown with team access c
 - **Backend**: Python 3.11+, Flask (web app), FastMCP (MCP server)
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, React Query, Framer Motion
 - **Data**: PostgreSQL (projects + members), Auth0 (OAuth2), GitHub App (repo access)
-- **Infra**: Gunicorn (WSGI), Uvicorn (ASGI for MCP), nginx, systemd
+- **Infra**: Gunicorn (WSGI), Uvicorn (ASGI for MCP), Caddy, systemd
 - **Other**: Resend (invitation emails), nh3 (HTML sanitization), Mermaid (diagrams)
 
 ## Architecture
 ```
-memento/
+mento/
 ├── app.py            # Flask factory, SPA fallback, project resolution
 ├── auth.py           # Auth0 OAuth + GitHub OAuth, access decorators
 ├── config.py         # ProjectConfig dataclass
@@ -41,21 +41,21 @@ frontend/                # React SPA (Vite)
 │   ├── pages/           # DashboardPage, DocPage, NewProjectPage, SettingsPage, HelpPage, LegalPage
 │   ├── hooks/use-auth.ts
 │   └── lib/api.ts       # Fetch wrapper
-└── dist/                # Built assets (served by Flask/nginx)
+└── dist/                # Built assets (served by Flask/Caddy)
 ```
 
 ## Commands
 ```bash
 # Dev
 cd frontend && npm run dev   # Vite dev server (proxies to Flask)
-python -m memento.app         # Flask dev (port 5002, Auth0 required)
+python -m mento.app           # Flask dev (port 5002, Auth0 required)
 
 # Build
 cd frontend && npm run build  # Build SPA to dist/
 
 # Prod
-gunicorn 'memento.app:create_app()' -b 127.0.0.1:5002
-uvicorn memento.mcp_server:app --host 127.0.0.1 --port 5004
+gunicorn 'mento.app:create_app()' -b 127.0.0.1:5002
+uvicorn mento.mcp_server:app --host 127.0.0.1 --port 5004
 ```
 
 ## URL Routing
@@ -67,13 +67,13 @@ uvicorn memento.mcp_server:app --host 127.0.0.1 --port 5004
 - `/<project>/issues` — issues page (SPA)
 - `/<project>/settings` — project settings (SPA)
 - `/new` — project creation wizard
-- `/admin` — super admin (MEMENTO_SUPER_ADMINS)
+- `/admin` — super admin (MENTO_SUPER_ADMINS)
 - `/auth/login|callback|logout` — Auth0 flow
 - `/auth/github|github/callback` — GitHub OAuth (user installations)
 
 ## Conventions
 - Multi-tenant via URL prefix `/<project>/` resolved in `url_value_preprocessor`
-- Access control: explicit membership in `memento_members` table
+- Access control: explicit membership in `mento_members` table
 - Roles: `blocked` → `member` → `admin`. Owner = project creator
 - `docs_paths=['/']` = wildcard (show all files in repo)
 - Backend = pure JSON API, frontend = React SPA (no server-side HTML)
@@ -82,7 +82,7 @@ uvicorn memento.mcp_server:app --host 127.0.0.1 --port 5004
 - GitHub installations filtered per user via OAuth user-to-server tokens
 
 ## Key Concepts
-- **Project**: slug + GitHub repo + access rules. Stored in `memento_projects` table.
+- **Project**: slug + GitHub repo + access rules. Stored in `mento_projects` table.
 - **Installation**: GitHub App install on an org/user. Provides repo access tokens.
 - **GitHub OAuth**: Separate from Auth0 login. Users connect GitHub to see their installations when creating projects. Token stored in session.
 - **MCP connector**: FastMCP remote server on port 5004, OAuth2 via Auth0 with DCR proxy. Users add `https://mcp.mento.cc/mcp` in claude.ai. 6 tools: list_projects, get_doc_tree, read_doc, create_doc, update_doc, list_issues.

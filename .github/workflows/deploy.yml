@@ -15,8 +15,8 @@ jobs:
           username: root
           key: ${{ secrets.SSH_DEPLOY_KEY }}
           script: |
-            cd /opt/memento
+            cd /opt/mento
             git pull origin master
-            ./venv/bin/pip install -r requirements.txt -q
+            ./venv/bin/pip install -e . -q
             cd frontend && npm ci --silent && npm run build
-            systemctl restart memento memento-mcp
+            systemctl restart mento mento-mcp

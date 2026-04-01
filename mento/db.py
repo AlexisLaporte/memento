@@ -8,7 +8,7 @@ from .config import ProjectConfig
 
 
 def connect():
-    return psycopg2.connect(os.getenv('DATABASE_URL', 'postgresql://localhost:5432/memento'))
+    return psycopg2.connect(os.getenv('DATABASE_URL', 'postgresql://localhost:5432/mento'))
 
 
 # ─── Schema ──────────────────────────────────────────────────────────────────
@@ -18,7 +18,7 @@ def ensure_schema():
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS memento_projects (
+                CREATE TABLE IF NOT EXISTS mento_projects (
                     slug TEXT PRIMARY KEY,
                     title TEXT NOT NULL,
                     repo_full_name TEXT NOT NULL,
@@ -33,12 +33,12 @@ def ensure_schema():
                 )
             """)
             # Migrations
-            cur.execute("ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS custom_domain TEXT DEFAULT ''")
-            cur.execute("ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS default_branch TEXT DEFAULT 'main'")
-            cur.execute("ALTER TABLE memento_projects ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE")
+            cur.execute("ALTER TABLE mento_projects ADD COLUMN IF NOT EXISTS custom_domain TEXT DEFAULT ''")
+            cur.execute("ALTER TABLE mento_projects ADD COLUMN IF NOT EXISTS default_branch TEXT DEFAULT 'main'")
+            cur.execute("ALTER TABLE mento_projects ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT FALSE")
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS memento_members (
-                    project_slug TEXT REFERENCES memento_projects(slug) ON DELETE CASCADE,
+                CREATE TABLE IF NOT EXISTS mento_members (
+                    project_slug TEXT REFERENCES mento_projects(slug) ON DELETE CASCADE,
                     email TEXT NOT NULL,
                     name TEXT,
                     picture TEXT,
@@ -48,7 +48,7 @@ def ensure_schema():
                 )
             """)
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS memento_users (
+                CREATE TABLE IF NOT EXISTS mento_users (
                     email TEXT PRIMARY KEY,
                     name TEXT,
                     picture TEXT,
@@ -81,7 +81,7 @@ def load_projects() -> dict[str, ProjectConfig]:
     """Load all projects."""
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT {_PROJECT_COLS} FROM memento_projects ORDER BY created_at")
+            cur.execute(f"SELECT {_PROJECT_COLS} FROM mento_projects ORDER BY created_at")
             return {row[0]: _row_to_config(row) for row in cur.fetchall()}
 
 
@@ -89,7 +89,7 @@ def get_project(slug: str) -> ProjectConfig | None:
     """Load a single project by slug."""
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT {_PROJECT_COLS} FROM memento_projects WHERE slug = %s", (slug,))
+            cur.execute(f"SELECT {_PROJECT_COLS} FROM mento_projects WHERE slug = %s", (slug,))
             row = cur.fetchone()
             return _row_to_config(row) if row else None
 
@@ -99,9 +99,9 @@ def load_projects_for_user(email: str) -> dict[str, ProjectConfig]:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(f"""
-                SELECT {_PROJECT_COLS} FROM memento_projects p
+                SELECT {_PROJECT_COLS} FROM mento_projects p
                 WHERE EXISTS (
-                    SELECT 1 FROM memento_members m
+                    SELECT 1 FROM mento_members m
                     WHERE m.project_slug = p.slug AND m.email = %s AND m.role != 'blocked'
                 )
                 ORDER BY p.created_at
@@ -115,7 +115,7 @@ def create_project(slug: str, title: str, repo_full_name: str,
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO memento_projects (slug, title, repo_full_name, installation_id,
+                INSERT INTO mento_projects (slug, title, repo_full_name, installation_id,
                     owner_email, docs_paths, allowed_files, color, default_branch)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
@@ -127,7 +127,7 @@ def create_project(slug: str, title: str, repo_full_name: str,
             ))
             # Auto-add owner as admin
             cur.execute("""
-                INSERT INTO memento_members (project_slug, email, role)
+                INSERT INTO mento_members (project_slug, email, role)
                 VALUES (%s, %s, 'admin')
                 ON CONFLICT DO NOTHING
             """, (slug, owner_email))
@@ -145,7 +145,7 @@ def update_project(slug: str, **kwargs):
     values = list(updates.values()) + [slug]
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"UPDATE memento_projects SET {set_clause} WHERE slug = %s", values)
+            cur.execute(f"UPDATE mento_projects SET {set_clause} WHERE slug = %s", values)
         conn.commit()
 
 
@@ -153,7 +153,7 @@ def get_project_by_domain(domain: str) -> ProjectConfig | None:
     """Look up a project by its custom domain."""
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT {_PROJECT_COLS} FROM memento_projects WHERE custom_domain = %s", (domain,))
+            cur.execute(f"SELECT {_PROJECT_COLS} FROM mento_projects WHERE custom_domain = %s", (domain,))
             row = cur.fetchone()
             return _row_to_config(row) if row else None
 
@@ -162,7 +162,7 @@ def get_projects_by_repo(repo_full_name: str) -> list[ProjectConfig]:
     """Find all projects pointing to a given repo."""
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute(f"SELECT {_PROJECT_COLS} FROM memento_projects WHERE repo_full_name = %s", (repo_full_name,))
+            cur.execute(f"SELECT {_PROJECT_COLS} FROM mento_projects WHERE repo_full_name = %s", (repo_full_name,))
             return [_row_to_config(row) for row in cur.fetchall()]
 
 
@@ -170,7 +170,7 @@ def delete_project(slug: str):
     """Delete a project (CASCADE deletes members)."""
     with connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM memento_projects WHERE slug = %s", (slug,))
+            cur.execute("DELETE FROM mento_projects WHERE slug = %s", (slug,))
         conn.commit()
 
 
@@ -180,7 +180,7 @@ def member_exists(project_slug: str, email: str) -> bool:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT 1 FROM memento_members WHERE project_slug = %s AND email = %s",
+                "SELECT 1 FROM mento_members WHERE project_slug = %s AND email = %s",
                 (project_slug, email),
             )
             return cur.fetchone() is not None
@@ -190,7 +190,7 @@ def get_member(project_slug: str, email: str) -> dict | None:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT email, name, picture, role FROM memento_members WHERE project_slug = %s AND email = %s",
+                "SELECT email, name, picture, role FROM mento_members WHERE project_slug = %s AND email = %s",
                 (project_slug, email),
             )
             row = cur.fetchone()
@@ -204,7 +204,7 @@ def upsert_member(project_slug: str, email: str, name: str, picture: str) -> str
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO memento_members (project_slug, email, name, picture)
+                INSERT INTO mento_members (project_slug, email, name, picture)
                 VALUES (%s, %s, %s, %s)
                 ON CONFLICT (project_slug, email) DO UPDATE SET name = %s, picture = %s
                 RETURNING role
@@ -219,7 +219,7 @@ def list_members(project_slug: str) -> list[dict]:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT email, name, picture, role, created_at
-                FROM memento_members WHERE project_slug = %s ORDER BY created_at
+                FROM mento_members WHERE project_slug = %s ORDER BY created_at
             """, (project_slug,))
             return [
                 {"email": r[0], "name": r[1], "picture": r[2], "role": r[3], "created_at": str(r[4])}
@@ -231,7 +231,7 @@ def invite_member(project_slug: str, email: str, name: str = ""):
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO memento_members (project_slug, email, name, role)
+                INSERT INTO mento_members (project_slug, email, name, role)
                 VALUES (%s, %s, %s, 'member')
                 ON CONFLICT DO NOTHING
             """, (project_slug, email, name))
@@ -244,7 +244,7 @@ def set_member_role(project_slug: str, email: str, role: str) -> bool:
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE memento_members SET role = %s WHERE project_slug = %s AND email = %s",
+                "UPDATE mento_members SET role = %s WHERE project_slug = %s AND email = %s",
                 (role, project_slug, email),
             )
         conn.commit()
@@ -255,7 +255,7 @@ def delete_member(project_slug: str, email: str):
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "DELETE FROM memento_members WHERE project_slug = %s AND email = %s",
+                "DELETE FROM mento_members WHERE project_slug = %s AND email = %s",
                 (project_slug, email),
             )
         conn.commit()
@@ -268,7 +268,7 @@ def upsert_user(email: str, name: str, picture: str, auth0_sub: str = ''):
     with connect() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO memento_users (email, name, picture, auth0_sub)
+                INSERT INTO mento_users (email, name, picture, auth0_sub)
                 VALUES (%s, %s, %s, %s)
                 ON CONFLICT (email) DO UPDATE
                     SET name = EXCLUDED.name, picture = EXCLUDED.picture,
@@ -282,7 +282,7 @@ def list_users() -> list[dict]:
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT email, name, picture, auth0_sub, created_at, last_login_at
-                FROM memento_users ORDER BY created_at DESC
+                FROM mento_users ORDER BY created_at DESC
             """)
             return [
                 {"email": r[0], "name": r[1], "picture": r[2], "auth0_sub": r[3],

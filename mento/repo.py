@@ -9,7 +9,7 @@ from .github_app import get_installation_token
 
 log = logging.getLogger(__name__)
 
-REPOS_DIR = os.getenv('MEMENTO_REPOS_DIR', '/opt/memento/repos')
+REPOS_DIR = os.getenv('MENTO_REPOS_DIR', '/opt/mento/repos')
 
 
 def repo_path(slug: str) -> str:
@@ -127,4 +127,4 @@ if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'sync':
         sync_all_projects()
     else:
-        print('Usage: python -m memento.repo sync')
+        print('Usage: python -m mento.repo sync')

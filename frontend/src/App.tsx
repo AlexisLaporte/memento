@@ -8,6 +8,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import NewProjectPage from '@/pages/NewProjectPage'
 import AdminPage from '@/pages/AdminPage'
 import DocPage from '@/pages/DocPage'
+import GraphPage from '@/pages/GraphPage'
 import IssuesPage from '@/pages/IssuesPage'
 import SettingsPage from '@/pages/SettingsPage'
 import HelpPage from '@/pages/HelpPage'
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="/new" element={<NewProjectPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/:project/settings" element={<SettingsPage />} />
+          <Route path="/:project/graph" element={<GraphPage />} />
           <Route path="/:project/issues" element={<IssuesPage />} />
           <Route path="/:project/*" element={<DocPage />} />
           <Route path="/:project" element={<DocPage />} />

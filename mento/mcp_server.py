@@ -13,6 +13,7 @@ from .config import ProjectConfig
 from .db import get_member, get_project, load_projects_for_user, member_exists
 from . import repo as git_repo
 from .github_app import github_api
+from .knowledge_graph import EdgeType, NodeType, get_or_build_graph
 from .mcp_auth import create_auth_provider, get_user_email
 from .routes.docs import _build_tree, _is_allowed, _parse_frontmatter
 
@@ -206,6 +207,166 @@ def update_doc(
         "commit_message": commit_message,
         "branch": target_branch,
     }
+
+
+@mcp.tool
+def get_knowledge_graph(project_slug: str) -> dict:
+    """Get the knowledge graph for a project's documentation.
+
+    Returns document nodes, cross-references, and hierarchy.
+    Use this to understand doc structure before diving into specific documents.
+    """
+    email = get_user_email()
+    config = _check_access(email, project_slug)
+    graph = get_or_build_graph(project_slug, config.docs_paths, config.allowed_files)
+    nodes = graph.nodes
+    return {
+        "project_slug": project_slug,
+        "stats": {
+            "documents": sum(1 for n in nodes.values() if n.type == NodeType.DOCUMENT),
+            "directories": sum(1 for n in nodes.values() if n.type == NodeType.DIRECTORY),
+            "cross_references": sum(1 for e in graph.edges if e.type == EdgeType.LINKS_TO),
+        },
+        "documents": [
+            {
+                "path": n.metadata["path"],
+                "title": n.metadata.get("title", n.label),
+                "word_count": n.metadata.get("word_count", 0),
+                "outgoing_links": sum(
+                    1 for e in graph._outgoing.get(n.id, [])
+                    if e.type == EdgeType.LINKS_TO
+                ),
+                "incoming_links": sum(
+                    1 for e in graph._incoming.get(n.id, [])
+                    if e.type == EdgeType.LINKS_TO
+                ),
+            }
+            for n in nodes.values() if n.type == NodeType.DOCUMENT
+        ],
+    }
+
+
+@mcp.tool
+def get_related_docs(project_slug: str, path: str) -> dict:
+    """Find documents related to a given document path.
+
+    Returns documents connected by cross-references (links to/from)
+    and sibling documents in the same directory.
+    """
+    email = get_user_email()
+    config = _check_access(email, project_slug)
+    graph = get_or_build_graph(project_slug, config.docs_paths, config.allowed_files)
+
+    doc_id = f"doc:{path}"
+    if doc_id not in graph.nodes:
+        raise ValueError(f"Document '{path}' not found in knowledge graph")
+
+    doc_node = graph.nodes[doc_id]
+
+    links_to = [
+        {
+            "path": node.metadata["path"],
+            "title": node.metadata.get("title", node.label),
+            "link_text": edge.metadata.get("link_text", ""),
+        }
+        for edge, node in graph.neighbors(doc_id, [EdgeType.LINKS_TO], "out")
+        if node.type == NodeType.DOCUMENT
+    ]
+
+    linked_from = [
+        {
+            "path": node.metadata["path"],
+            "title": node.metadata.get("title", node.label),
+            "link_text": edge.metadata.get("link_text", ""),
+        }
+        for edge, node in graph.neighbors(doc_id, [EdgeType.LINKS_TO], "in")
+        if node.type == NodeType.DOCUMENT
+    ]
+
+    parent_dir = '/'.join(path.split('/')[:-1])
+    parent_id = f"dir:{parent_dir}" if parent_dir else f"project:{project_slug}"
+    siblings = [
+        {"path": node.metadata["path"], "title": node.metadata.get("title", node.label)}
+        for edge, node in graph.neighbors(parent_id, [EdgeType.CONTAINS], "out")
+        if node.type == NodeType.DOCUMENT and node.id != doc_id
+    ]
+
+    return {
+        "document": {"path": path, "title": doc_node.metadata.get("title", doc_node.label)},
+        "links_to": links_to,
+        "linked_from": linked_from,
+        "siblings": siblings,
+    }
+
+
+@mcp.tool
+def search_knowledge_graph(
+    project_slug: str,
+    query_type: str,
+    value: str = "",
+) -> list[dict]:
+    """Query the knowledge graph.
+
+    Args:
+        project_slug: Project identifier.
+        query_type: One of: "links_to" (docs linking to path), "linked_from" (docs
+            linked from path), "orphans" (docs with no incoming links),
+            "most_linked" (top 10 most referenced docs).
+        value: File path for links_to/linked_from queries. Ignored for orphans/most_linked.
+    """
+    email = get_user_email()
+    config = _check_access(email, project_slug)
+    graph = get_or_build_graph(project_slug, config.docs_paths, config.allowed_files)
+
+    if query_type == "links_to":
+        doc_id = f"doc:{value}"
+        return [
+            {"path": n.metadata["path"], "title": n.metadata.get("title", n.label),
+             "link_text": e.metadata.get("link_text", "")}
+            for e, n in graph.neighbors(doc_id, [EdgeType.LINKS_TO], "in")
+            if n.type == NodeType.DOCUMENT
+        ]
+
+    elif query_type == "linked_from":
+        doc_id = f"doc:{value}"
+        return [
+            {"path": n.metadata["path"], "title": n.metadata.get("title", n.label)}
+            for e, n in graph.neighbors(doc_id, [EdgeType.LINKS_TO], "out")
+            if n.type == NodeType.DOCUMENT
+        ]
+
+    elif query_type == "orphans":
+        return [
+            {"path": n.metadata["path"], "title": n.metadata.get("title", n.label)}
+            for n in graph.nodes.values()
+            if n.type == NodeType.DOCUMENT
+            and not any(
+                e.type == EdgeType.LINKS_TO
+                for e in graph._incoming.get(n.id, [])
+            )
+        ]
+
+    elif query_type == "most_linked":
+        docs = [
+            (
+                sum(1 for e in graph._incoming.get(n.id, []) if e.type == EdgeType.LINKS_TO),
+                n,
+            )
+            for n in graph.nodes.values()
+            if n.type == NodeType.DOCUMENT
+        ]
+        docs.sort(key=lambda x: x[0], reverse=True)
+        return [
+            {"path": n.metadata["path"], "title": n.metadata.get("title", n.label),
+             "incoming_links": c}
+            for c, n in docs[:10]
+        ]
+
+    else:
+        raise ValueError(
+            f"Unknown query_type: {query_type}. "
+            "Use: links_to, linked_from, orphans, most_linked"
+        )
 
 
 # ASGI app for uvicorn

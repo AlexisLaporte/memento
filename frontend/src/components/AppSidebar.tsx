@@ -41,7 +41,7 @@ function useAppContext() {
   }
 
   const sub = segments[1] || ''
-  const isSpecial = ['settings', 'issues'].includes(sub)
+  const isSpecial = ['settings', 'issues', 'graph'].includes(sub)
   const docPath = isSpecial ? '' : segments.slice(1).join('/')
 
   return { context: 'project' as const, project: first, subPath: docPath }
@@ -122,6 +122,7 @@ function ProjectSidebar({ project, activePath }: { project: string; activePath: 
   })
 
   const config = settings?.project
+  const isOnGraph = location.pathname === `${projectBase}/graph`
   const isOnIssues = location.pathname === `${projectBase}/issues`
   const isOnSettings = location.pathname === `${projectBase}/settings`
 
@@ -192,6 +193,14 @@ function ProjectSidebar({ project, activePath }: { project: string; activePath: 
 
         {/* Links */}
         <div className="space-y-0.5">
+          <Link
+            to={`${projectBase}/graph`}
+            className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${
+              isOnGraph ? 'bg-sidebar-accent text-sidebar-foreground font-medium' : 'text-sidebar-foreground/70 hover:bg-sidebar-accent'
+            }`}
+          >
+            Graph
+          </Link>
           <Link
             to={`${projectBase}/issues`}
             className={`flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${

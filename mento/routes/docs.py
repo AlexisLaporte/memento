@@ -9,6 +9,7 @@ import yaml
 from flask import Blueprint, Response, g, jsonify, request
 
 from ..auth import requires_access
+from ..knowledge_graph import get_or_build_graph
 from .. import repo as git_repo
 
 
@@ -322,6 +323,28 @@ def api_raw(doc_path: str):
         'Content-Disposition': 'inline',
         'Cache-Control': 'private, max-age=300',
     })
+
+
+@docs_bp.route('/api/knowledge-graph')
+@requires_access
+def api_knowledge_graph():
+    """Return the knowledge graph (nodes + edges) for the frontend."""
+    config = g.config
+    if not config.repo_full_name:
+        return jsonify({"nodes": [], "edges": []})
+
+    if not git_repo.repo_exists(config.slug):
+        return jsonify({"error": "Repository not synced yet"}), 503
+
+    cache_key = f'kg-api:{config.slug}'
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return jsonify(cached)
+
+    graph = get_or_build_graph(config.slug, config.docs_paths, config.allowed_files)
+    result = graph.to_dict()
+    _cache_set(cache_key, result)
+    return jsonify(result)
 
 
 @docs_bp.route('/api/search')

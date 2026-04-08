@@ -9,6 +9,11 @@ from .github_app import get_installation_token
 
 log = logging.getLogger(__name__)
 
+
+def _redact(text: str, token: str) -> str:
+    """Replace sensitive token in text with [REDACTED]."""
+    return text.replace(token, '[REDACTED]')
+
 REPOS_DIR = os.getenv('MENTO_REPOS_DIR', '/opt/mento/repos')
 
 
@@ -35,7 +40,7 @@ def clone_repo(slug: str, repo_full_name: str, installation_id: int, branch: str
         capture_output=True, text=True, timeout=120,
     )
     if result.returncode != 0:
-        raise RuntimeError(f'git clone failed: {result.stderr.strip()}')
+        raise RuntimeError(f'git clone failed: {_redact(result.stderr.strip(), token)}')
     log.info('Cloned %s → %s', repo_full_name, dest)
 
 
@@ -54,7 +59,7 @@ def pull_repo(slug: str, installation_id: int) -> None:
     if result.returncode == 0:
         log.info('Pulled %s', slug)
     else:
-        log.warning('Pull failed for %s: %s', slug, result.stderr.strip())
+        log.warning('Pull failed for %s: %s', slug, _redact(result.stderr.strip(), token))
 
 
 def delete_repo(slug: str) -> None:

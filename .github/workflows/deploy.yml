@@ -16,6 +16,8 @@ jobs:
           key: ${{ secrets.SSH_DEPLOY_KEY }}
           script: |
             cd /opt/mento
+            git clean -fd
+            git checkout -- .
             git pull origin master
             ./venv/bin/pip install -e . -q
             cd frontend && npm ci --silent && npm run build

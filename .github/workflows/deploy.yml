@@ -14,13 +14,5 @@ jobs:
           host: 51.15.225.121
           username: root
           key: ${{ secrets.SSH_DEPLOY_KEY }}
-          script_stop: false
           script: |
-            cd /opt/mento
-            git fetch origin master
-            git checkout -f origin/master
-            git branch -f master origin/master
-            git checkout master
-            ./venv/bin/pip install -e . -q
-            cd frontend && npm ci --silent && npm run build
-            systemctl restart mento mento-mcp
+            cd /opt/mento && rm -f README.md && git fetch origin master && git reset --hard origin/master && ./venv/bin/pip install -e . -q && cd frontend && npm ci --silent && npm run build && systemctl restart mento mento-mcp
